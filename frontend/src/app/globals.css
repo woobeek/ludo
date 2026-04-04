@@ -186,7 +186,7 @@ main {
 /* Mascot */
 .mascot-container {
     position: absolute;
-    bottom: 125px;
+    bottom: 200px;
     right: -250px;
     z-index: 20;
     display: flex;
