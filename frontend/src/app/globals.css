@@ -717,7 +717,10 @@ main {
         display: none;
     }
     .mascot-container {
-        display: none;
+        right: -180px;
+    }
+    .mascot-img {
+        width: 250px;
     }
 }
 
