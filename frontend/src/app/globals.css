@@ -186,7 +186,7 @@ main {
 /* Mascot */
 .mascot-container {
     position: absolute;
-    bottom: 40px;
+    bottom: -5px;
     right: -250px;
     z-index: 20;
     display: flex;
@@ -197,7 +197,7 @@ main {
 }
 
 .is-owner .mascot-container {
-    bottom: 160px;
+    bottom: 125px;
 }
 
 .mascot-img {
