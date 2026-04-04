@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$LUDO Casino | Web3 Luxury</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <header class="glass-header">
+        <div class="logo">
+            <span class="chip-icon">🪙</span> $LUDO <span class="thin">CASINO</span>
+        </div>
+        <div class="header-stats">
+            <div class="stat-box">
+                <span class="label">TOTAL BURNED 🔥</span>
+                <span class="value burn-value" id="total-burned">1,240,500</span>
+            </div>
+        </div>
+        <div class="wallet-section">
+            <div id="balance-display" class="hidden glass-panel">
+                <span id="sol-balance">5000</span> <span class="currency">$LUDO</span>
+            </div>
+            <button id="connect-btn" class="cyber-btn">
+                <span class="btn-text">CONNECT WALLET</span>
+                <span class="btn-glitch"></span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="leaderboard glass-panel">
+            <h3 class="leaderboard-title">TOP WINS TODAY</h3>
+            <ul class="leaderboard-list" id="leaderboard-list">
+                <!-- Injected via JS -->
+            </ul>
+        </div>
+
+        <div class="social-links">
+            <a href="#" class="social-btn" title="X (Twitter)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16M4 20L20 4"/></svg>
+            </a>
+            <a href="#" class="social-btn" title="Telegram">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </a>
+            <a href="#" class="social-btn" title="DexScreener">
+                <!-- Generic DexScreener-like chart icon -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </a>
+        </div>
+
+        <div class="casino-board glass-panel">
+            <div class="mascot-container" id="mascot">
+                <div class="speech-bubble hidden" id="mascot-bubble">Welcome!</div>
+                <img src="LUDO.png" alt="Ludo Mascot" class="mascot-img">
+            </div>
+            <div class="board-inner">
+                <div class="machine-header">
+                    <h2 class="neon-title">PROVABLY FAIR SLOTS</h2>
+                    <div class="jackpot-display">
+                        <span class="jp-label">GRAND JACKPOT</span>
+                        <span class="jp-amount">1,000,000 <span class="jp-currency">$LUDO</span></span>
+                    </div>
+                </div>
+
+                <div class="slot-machine-frame">
+                    <div class="slot-machine-bezel">
+                        <div class="reels-window">
+                            <div class="reel-blur-overlay" id="blur-overlay"></div>
+                            <div class="winning-line"></div>
+                            <div class="reel" id="reel1">
+                                <div class="symbol-container"><div class="symbol">🍒</div></div>
+                            </div>
+                            <div class="reel" id="reel2">
+                                <div class="symbol-container"><div class="symbol">🪙</div></div>
+                            </div>
+                            <div class="reel" id="reel3">
+                                <div class="symbol-container"><div class="symbol">7️⃣</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-deck">
+                    <div class="bet-station glass-panel">
+                        <span class="deck-label">BET AMOUNT ($LUDO)</span>
+                        <div class="bet-stepper">
+                            <button id="bet-down" class="stepper-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12H4" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                            <input type="number" id="bet-amount" value="100" step="50" min="50" max="1000" readonly>
+                            <button id="bet-up" class="stepper-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="auto-bet-station glass-panel">
+                        <span class="deck-label">AUTO SPINS</span>
+                        <div class="bet-stepper">
+                            <button id="auto-down" class="stepper-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 12H4" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                            <input type="number" id="auto-count" value="0" step="1" min="0" max="100" readonly>
+                            <button id="auto-up" class="stepper-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="action-station">
+                        <button id="spin-btn" class="spin-btn locked" disabled>
+                            <div class="spin-btn-inner">
+                                <span class="spin-text">LOCKED</span>
+                                <span class="spin-subtext">CONNECT WALLET</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="status-screen" class="status-screen glass-panel">
+                    <div class="status-content">WAITING FOR CONNECTION...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="glass-footer">
+        <div class="live-feed">
+            <div class="feed-badge">LIVE</div>
+            <div class="feed-scroller">
+                <span id="mock-tx" class="tx-text">Wallet D7fE... just burned 500 $LUDO! 🔥</span>
+            </div>
+        </div>
+        <div class="network-stats">
+            <span class="status-dot"></span> SOLANA MAINNET
+        </div>
+    </footer>
+
+    <!-- Wallet Modal -->
+    <div id="wallet-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-card glass-panel">
+            <h3 class="modal-title">Select Wallet</h3>
+            <p class="modal-subtitle">Connect to Web3 to start playing</p>
+            <div class="wallet-options">
+                <button class="wallet-item phantom" id="phantom-connect">
+                    <div class="wallet-icon">
+                        <img src="https://cryptologos.cc/logos/phantom-logo.png" alt="Phantom">
+                    </div>
+                    <span class="wallet-name">Phantom</span>
+                    <span class="wallet-status">Detected</span>
+                </button>
+            </div>
+            <button class="close-modal" onclick="closeModal()">✕</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
