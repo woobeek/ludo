@@ -186,7 +186,7 @@ main {
 /* Mascot */
 .mascot-container {
     position: absolute;
-    bottom: 160px;
+    bottom: 40px;
     right: -250px;
     z-index: 20;
     display: flex;
@@ -194,6 +194,10 @@ main {
     align-items: center;
     animation: mascotFloat 4s ease-in-out infinite;
     pointer-events: none;
+}
+
+.is-owner .mascot-container {
+    bottom: 160px;
 }
 
 .mascot-img {

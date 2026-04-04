@@ -115,7 +115,7 @@ export default function CasinoBoard() {
     };
 
     return (
-        <div className="casino-board glass-panel">
+        <div className={`casino-board glass-panel ${isOwner ? 'is-owner' : ''}`}>
             <Mascot />
             
             <div className="board-inner">
