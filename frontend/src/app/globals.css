@@ -923,8 +923,34 @@ main {
         height: 16px;
     }
 
-    /* Mascot & Leaderboard */
+    /* Mascot on mobile: inline between reels and controls */
     .mascot-container {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin: -5px auto 10px;
+        animation: mascotFloat 3s ease-in-out infinite;
+        pointer-events: auto;
+    }
+
+    .mascot-img {
+        width: 100px;
+        filter: drop-shadow(0 5px 15px rgba(255, 215, 0, 0.3));
+    }
+
+    .speech-bubble {
+        font-size: 12px;
+        padding: 6px 12px;
+        max-width: 140px;
+        margin-bottom: 0;
+        order: -1;
+    }
+
+    .speech-bubble::after {
         display: none;
     }
 
