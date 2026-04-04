@@ -673,7 +673,13 @@ main {
     to { border-color: rgba(255, 215, 0, 0.5); }
 }
 
-@media (max-width: 768px) {.status-dot { width: 8px; height: 8px; background: #14F195; border-radius: 50%; box-shadow: 0 0 10px #14F195; } }
+.status-dot { 
+    width: 8px; 
+    height: 8px; 
+    background: #14F195; 
+    border-radius: 50%; 
+    box-shadow: 0 0 10px #14F195; 
+}
 
 .provably-fair-badge {
     margin-top: 15px;

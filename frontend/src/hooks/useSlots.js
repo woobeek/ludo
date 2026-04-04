@@ -1,3 +1,4 @@
+'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { generateSeed, generateSpinResult, generateHash } from '../utils/provablyFair';
