@@ -25,7 +25,8 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     position: relative;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -707,3 +708,287 @@ main {
     font-size: 20px; cursor: pointer;
 }
 .close-modal:hover { color: white; }
+
+/* ============= MOBILE RESPONSIVE ============= */
+
+/* Tablets and small laptops */
+@media (max-width: 1100px) {
+    .leaderboard {
+        display: none;
+    }
+    .mascot-container {
+        display: none;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Header */
+    .glass-header {
+        padding: 10px 15px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .logo {
+        font-size: 16px;
+        gap: 6px;
+    }
+
+    .header-stats {
+        position: static;
+        transform: none;
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .stat-box .value {
+        font-size: 12px;
+    }
+
+    .stat-box .label {
+        font-size: 8px;
+        letter-spacing: 1px;
+    }
+
+    .wallet-section {
+        gap: 8px;
+    }
+
+    #balance-display {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .cyber-btn {
+        padding: 8px 16px;
+        font-size: 11px;
+    }
+
+    /* Main layout */
+    main {
+        padding: 10px;
+        align-items: flex-start;
+        min-height: auto;
+    }
+
+    .casino-board {
+        max-width: 100%;
+        transform: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .board-inner {
+        padding: 15px;
+        border-radius: 12px;
+    }
+
+    /* Machine header */
+    .machine-header {
+        margin-bottom: 15px;
+    }
+
+    .neon-title {
+        font-size: 10px;
+        letter-spacing: 3px;
+        margin-bottom: 8px;
+    }
+
+    .jackpot-display {
+        padding: 8px 20px;
+    }
+
+    .jp-label {
+        font-size: 9px;
+        letter-spacing: 1px;
+    }
+
+    .jp-amount {
+        font-size: 20px;
+    }
+
+    .jp-currency {
+        font-size: 12px;
+    }
+
+    /* Reels */
+    .slot-machine-frame {
+        padding: 8px;
+        margin-bottom: 15px;
+        border-radius: 12px;
+    }
+
+    .reels-window {
+        height: 120px;
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .symbol {
+        font-size: 50px;
+    }
+
+    /* Controls */
+    .control-deck {
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .bet-station, .auto-bet-station {
+        padding: 12px;
+        border-radius: 10px;
+    }
+
+    .deck-label {
+        font-size: 10px;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+
+    #bet-amount, #auto-count {
+        font-size: 18px;
+    }
+
+    .stepper-btn {
+        width: 44px;
+        min-height: 40px;
+    }
+
+    .action-station {
+        flex: none;
+    }
+
+    .spin-btn {
+        height: auto;
+        padding: 3px;
+        box-shadow: 0 8px 0 #0a0a0f, 0 12px 12px rgba(0,0,0,0.5);
+    }
+
+    .spin-btn:not(.locked) {
+        box-shadow: 0 8px 0 #8B6508, 0 12px 16px var(--gold-glow);
+    }
+
+    .spin-btn-inner {
+        padding: 14px;
+    }
+
+    .spin-text {
+        font-size: 22px;
+    }
+
+    .spin-subtext {
+        font-size: 9px;
+        letter-spacing: 2px;
+    }
+
+    /* Status */
+    .status-screen {
+        padding: 10px;
+        min-height: 40px;
+        font-size: 13px;
+    }
+
+    /* Provably Fair Badge */
+    .provably-fair-badge {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+        padding: 8px 10px;
+        font-size: 10px;
+        margin-top: 10px;
+    }
+
+    /* Social links */
+    .social-links {
+        bottom: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+
+    .social-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .social-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Mascot & Leaderboard */
+    .mascot-container {
+        display: none;
+    }
+
+    .leaderboard {
+        display: none;
+    }
+
+    /* Footer */
+    .glass-footer {
+        padding: 8px 15px;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 10px;
+    }
+
+    /* Modal */
+    .modal-card {
+        width: calc(100vw - 30px);
+        padding: 25px;
+        border-radius: 16px;
+    }
+
+    .modal-title {
+        font-size: 16px;
+    }
+
+    .modal-subtitle {
+        font-size: 12px;
+        margin-bottom: 20px;
+    }
+
+    .wallet-item {
+        padding: 12px;
+        border-radius: 10px;
+    }
+
+    .wallet-name {
+        font-size: 14px;
+    }
+
+    .wallet-item + .wallet-item {
+        margin-top: 8px;
+    }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+    .jp-amount {
+        font-size: 16px;
+    }
+
+    .reels-window {
+        height: 100px;
+    }
+
+    .symbol {
+        font-size: 40px;
+    }
+
+    .spin-text {
+        font-size: 18px;
+    }
+
+    #bet-amount, #auto-count {
+        font-size: 16px;
+    }
+}
