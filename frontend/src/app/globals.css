@@ -629,8 +629,51 @@ main {
 .feed-badge { background: var(--red); color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; animation: pulseRed 2s infinite; }
 @keyframes pulseRed { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-.network-stats { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
-.status-dot { width: 8px; height: 8px; background: #14F195; border-radius: 50%; box-shadow: 0 0 10px #14F195; }
+.network-stats { display: flex; align-items: center; gap: 8px;    color: var(--text-muted);
+}
+
+.owner-dashboard {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    box-shadow: 0 0 30px rgba(255, 174, 0, 0.1) inset;
+    animation: gold-pulse 4s infinite alternate;
+}
+
+.owner-label {
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.2rem;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+    text-shadow: 0 0 10px var(--gold-glow);
+}
+
+.profit-amount {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #fff;
+    font-family: var(--font-mono);
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.profit-currency {
+    font-size: 1rem;
+    color: var(--gold);
+}
+
+@keyframes gold-pulse {
+    from { border-color: rgba(255, 215, 0, 0.2); }
+    to { border-color: rgba(255, 215, 0, 0.5); }
+}
+
+@media (max-width: 768px) {.status-dot { width: 8px; height: 8px; background: #14F195; border-radius: 50%; box-shadow: 0 0 10px #14F195; } }
 
 .provably-fair-badge {
     margin-top: 15px;

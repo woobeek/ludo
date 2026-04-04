@@ -1,6 +1,9 @@
 'use client';
 import { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+
+const LUDO_MINT = 'Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG';
 
 const GameContext = createContext(null);
 
@@ -61,12 +64,14 @@ export function GameProvider({ children }) {
     }, []);
 
     // ---- STATE LAYER ----
+    const { connection } = useConnection();
     const { connected, publicKey, disconnect } = useWallet();
     const isConnected = connected;
     const walletAddress = publicKey ? `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}` : '';
     
-    const [balance, setBalance] = useState(5000);
-    const [totalBurned, setTotalBurned] = useState(1240500);
+    const [balance, setBalance] = useState(0);
+    const [totalBurned, setTotalBurned] = useState(0);
+    const [devProfit, setDevProfit] = useState(0);
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [mockTx, setMockTx] = useState({ text: 'Wallet D7fE... just burned 500 $LUDO! 🔥', color: 'var(--text-muted)' });
     const [statusScreenHtml, setStatusScreenHtml] = useState({ 
@@ -75,6 +80,50 @@ export function GameProvider({ children }) {
     });
     
     const [mascotState, setMascotState] = useState({ mode: 'idle', message: '', isSpinning: false, showMessage: false });
+
+    // ---- BLOCKCHAIN LAYER ----
+    const fetchBalance = useCallback(async () => {
+        if (!publicKey || !connection) return;
+        
+        try {
+            // 1. Fetch User $LUDO Balance
+            const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+                mint: new PublicKey(LUDO_MINT)
+            });
+
+            if (tokenAccounts.value.length > 0) {
+                const amount = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+                setBalance(amount);
+            } else {
+                setBalance(0);
+            }
+
+            // 2. Fetch Real "Burned" Stats (Initial Supply 1,000,000 - Total Supply)
+            const supply = await connection.getTokenSupply(new PublicKey(LUDO_MINT));
+            const currentSupply = supply.value.uiAmount;
+            const burnedCount = Math.max(0, 1000000 - currentSupply);
+            // 3. Fetch Developer Profit (Balance of Dev Wallet)
+            const devPublicKey = new PublicKey('HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV');
+            const devTokenAccounts = await connection.getParsedTokenAccountsByOwner(devPublicKey, {
+                mint: new PublicKey(LUDO_MINT)
+            });
+
+            if (devTokenAccounts.value.length > 0) {
+                const amount = devTokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
+                setDevProfit(amount);
+            }
+
+        } catch (error) {
+            console.error('❌ Error fetching blockchain data:', error);
+        }
+    }, [publicKey, connection]);
+
+    useEffect(() => {
+        if (isConnected) {
+            fetchBalance();
+            setStatusScreenHtml({ text: 'READY TO SPIN', type: 'normal' });
+        }
+    }, [isConnected, fetchBalance]);
 
     const updateBalance = useCallback((amount) => setBalance(prev => prev + amount), []);
     const updateBurned = useCallback((amount) => setTotalBurned(prev => prev + amount), []);
@@ -115,6 +164,7 @@ export function GameProvider({ children }) {
         walletAddress,
         balance,
         totalBurned,
+        devProfit,
         updateBalance,
         updateBurned,
         showWalletModal,

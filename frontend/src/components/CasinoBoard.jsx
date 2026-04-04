@@ -2,10 +2,14 @@
 import { useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSlots } from '../hooks/useSlots';
+import { useWallet } from '@solana/wallet-adapter-react';
 import Mascot from './Mascot';
 
 export default function CasinoBoard() {
-    const { isConnected, statusScreenHtml, initAudio, playSound } = useGame();
+    const { isConnected, statusScreenHtml, initAudio, playSound, devProfit } = useGame();
+    const { publicKey } = useWallet();
+    
+    const isOwner = publicKey?.toBase58() === 'HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV';
     
     const reel1Ref = useRef(null);
     const reel2Ref = useRef(null);
@@ -198,6 +202,15 @@ export default function CasinoBoard() {
                     <span className="pf-hash">Hash: {provablyFairState.currentServerHash ? `${provablyFairState.currentServerHash.slice(0, 16)}...` : 'Generating...'}</span>
                     <span className="pf-nonce">Nonce: {provablyFairState.nonce}</span>
                 </div>
+
+                {isOwner && (
+                    <div className="owner-dashboard glass-panel">
+                        <span className="owner-label">👑 MY REVENUE</span>
+                        <div className="owner-profit">
+                            <span className="profit-amount">+{devProfit.toLocaleString()} <span className="profit-currency">$LUDO</span></span>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

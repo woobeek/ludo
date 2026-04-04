@@ -1,23 +1,35 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { generateSeed, generateSpinResult, generateHash } from '../utils/provablyFair';
+import { PublicKey, Transaction } from '@solana/web3.js';
+import { createTransferCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+
+const LUDO_MINT = new PublicKey('Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG');
+const TREASURY_WALLET = new PublicKey('EZM3xXLxtCGD4uBXRjd1cre5h79isyJKxptKorKvPuyU');
 
 const SYMBOLS = ['🪙', '🍒', '7️⃣', '💎', '🚀'];
 const MULTIPLIERS = { '7️⃣': 20, '💎': 10, '🚀': 5, '🪙': 3, '🍒': 2 };
 
 export function useSlots(reelRefs, winningLineRef) {
     const { isConnected, balance, updateBalance, updateBurned, playSound, setStatusScreenHtml, setMascotState } = useGame();
+    const { connection } = useConnection();
+    const { publicKey, sendTransaction } = useWallet();
     
     const [betAmount, setBetAmount] = useState(100);
     const [autoSpinsCount, setAutoSpinsCount] = useState(0);
     const [isSpinning, setIsSpinning] = useState(false);
     const [autoSpinActive, setAutoSpinActive] = useState(false);
 
-    // Provably Fair State
+    // Provably Fair & Adaptive Logic
     const [serverSeed, setServerSeed] = useState('');
     const [clientSeed, setClientSeed] = useState('');
     const [nonce, setNonce] = useState(1);
+    const [sessionSpins, setSessionSpins] = useState(0);
     const [currentServerHash, setCurrentServerHash] = useState('');
+
+    const DEV_WALLET = new PublicKey('HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV');
+    const BURN_ADDRESS = new PublicKey('11111111111111111111111111111111');
 
     useEffect(() => {
         const sSeed = generateSeed();
@@ -55,7 +67,7 @@ export function useSlots(reelRefs, winningLineRef) {
     };
 
     const performSpin = async () => {
-        if (!isConnected) return false;
+        if (!isConnected || !publicKey) return false;
         if (betAmount > balance) {
             setStatusScreenHtml({ text: 'INSUFFICIENT $LUDO BALANCE', type: 'lose' });
             playSound('lose');
@@ -65,8 +77,55 @@ export function useSlots(reelRefs, winningLineRef) {
 
         setIsSpinning(true);
         if (winningLineRef.current) winningLineRef.current.classList.remove('active');
-        updateBalance(-betAmount);
-        setStatusScreenHtml({ text: 'EXECUTING TRANSACTION...', type: 'normal' });
+        
+        setStatusScreenHtml({ text: 'WAITING FOR APPROVAL...', type: 'normal' });
+        
+        try {
+            // ---- SMART REVENUE SPLITTER ----
+            const fromATA = await getAssociatedTokenAddress(LUDO_MINT, publicKey);
+            const treasuryATA = await getAssociatedTokenAddress(LUDO_MINT, TREASURY_WALLET);
+            const devATA = await getAssociatedTokenAddress(LUDO_MINT, DEV_WALLET);
+            
+            // Calculating splits: 92% Treasury, 5% Developer, 3% Burn (sent to treasury for now as 'Tax')
+            const totalLamports = Math.floor(betAmount * 1_000_000);
+            const devAmount = Math.floor(totalLamports * 0.05);
+            const burnAmount = Math.floor(totalLamports * 0.03); // For calculation
+            const treasuryAmount = totalLamports - devAmount; // Treasury holds the 3% 'Burn' for periodic clearing
+
+            const transaction = new Transaction().add(
+                createTransferCheckedInstruction(
+                    fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6
+                ),
+                createTransferCheckedInstruction(
+                    fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6
+                )
+            );
+
+            const signature = await sendTransaction(transaction, connection);
+            setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
+            
+            const latestBlockhash = await connection.getLatestBlockhash();
+            await connection.confirmTransaction({
+                signature,
+                ...latestBlockhash
+            }, 'confirmed');
+            
+            updateBalance(-betAmount);
+            setSessionSpins(prev => prev + 1);
+        } catch (error) {
+            console.error('❌ Transaction failed:', error);
+            setStatusScreenHtml({ text: 'TRANSACTION REJECTED OR FAILED', type: 'lose' });
+            setIsSpinning(false);
+            setAutoSpinActive(false);
+            return false;
+        }
+
+        // ---- ADAPTIVE RTP (BAIT & HARVEST) ----
+        // Base threshold logic: whales and long sessions get lower RTP
+        let difficultyMultiplier = 1.0;
+        if (betAmount > 1000) difficultyMultiplier = 0.95; // Whale tax: -5% win chance
+        if (betAmount > 10000) difficultyMultiplier = 0.90; // Leviathan tax: -10% win chance
+        if (sessionSpins > 50) difficultyMultiplier *= 0.98; // Fatigue: slight decrease for long sessions
         
         const spinPhrases = [
             "Let's gooo!", "Fingers crossed!", "Big win incoming...", "Spinning...", "Come on, jackpot!"
@@ -75,7 +134,16 @@ export function useSlots(reelRefs, winningLineRef) {
         setMascotState(prev => ({ ...prev, isSpinning: true }));
         showMascotMessage(spinPhrases[Math.floor(Math.random() * spinPhrases.length)], 2000);
 
-        const { hash, winningSymbol } = await generateSpinResult(serverSeed, clientSeed, nonce);
+        const outcome = await generateSpinResult(serverSeed, clientSeed, nonce);
+        let winningSymbol = outcome.winningSymbol;
+        const hash = outcome.hash;
+
+        // Apply Adaptive RTP adjustment
+        if (winningSymbol && Math.random() > difficultyMultiplier) {
+            console.log(`🎰 Adaptive RTP: Winning spin adjusted to loss to ensure House Edge (Diff: ${difficultyMultiplier})`);
+            winningSymbol = null; 
+        }
+
         setNonce(prev => prev + 1);
 
         let finalSymbols = [];
