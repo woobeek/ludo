@@ -270,14 +270,20 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -118px; /* Finger 'lays' on the bottom-right edge of the button */
-    right: -202px; /* Finger aims at 'I'/'N' in 'SPIN' */
+    bottom: -85px !important; /* Visual Audit Fix: Finger on button edge */
+    right: -244px !important; /* Visual Audit Fix: Finger on button edge */
     z-index: 20;
     display: flex;
     flex-direction: column;
     align-items: center;
     animation: mascotFloat 5s ease-in-out infinite;
     pointer-events: none; /* Rabbit never blocks user interaction */
+}
+
+.mascot-container img {
+    width: 380px;
+    height: auto;
+    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
 }
 
 .mascot-container img {
