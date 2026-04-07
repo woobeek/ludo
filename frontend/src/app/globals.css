@@ -270,14 +270,20 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: 40px; /* Pointing at button vertical center */
-    right: -240px; /* Finger in button horizontal center (large size) */
+    bottom: 25px; /* Adjusted for smaller size */
+    right: -190px; /* Adjusted for smaller size to keep finger on SPIN */
     z-index: 20;
     display: flex;
     flex-direction: column;
     align-items: center;
     animation: mascotFloat 5s ease-in-out infinite;
     pointer-events: none;
+}
+
+.mascot-container img {
+    width: 380px; /* Slightly smaller as requested */
+    height: auto;
+    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
 }
 
 .is-owner .mascot-container { bottom: 90px; }
@@ -369,7 +375,7 @@ main {
 /* ============ LEADERBOARD ============ */
 .leaderboard {
     position: absolute;
-    left: -260px; /* Anchor closely to slots like in reference */
+    left: -270px; /* Closer to slots for 1424px screen visibility */
     top: 32%;      /* Align with reel top edge */
     width: 250px;
     padding: 24px 20px;
@@ -382,6 +388,7 @@ main {
         inset 0 1px 0 rgba(255,255,255,0.05);
     z-index: 10;
 }
+
 
 
 @media (max-width: 1440px) {
