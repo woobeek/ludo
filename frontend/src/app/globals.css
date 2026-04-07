@@ -248,18 +248,18 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 100px 40px;
+    padding: 80px 20px;
     width: 100%;
     position: relative;
     z-index: 2;
 }
 
 .casino-board {
-    position: relative; /* ANCHOR FOR WINGS */
+    position: relative;
     border-radius: 28px;
     padding: 2px;
     width: 100%;
-    max-width: 820px;
+    max-width: 800px; /* Optimized for 1270px screens */
     background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(153,69,255,0.08), rgba(255,215,0,0.05));
     box-shadow: 
         0 40px 80px rgba(0,0,0,0.7),
@@ -270,8 +270,8 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -35px;
-    left: calc(100% + 15px); /* Anchor exactly to board right edge */
+    bottom: -20px;
+    right: -160px; /* Adjusted to point exactly at the SPIN button on 800px board */
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -369,10 +369,10 @@ main {
 /* ============ LEADERBOARD ============ */
 .leaderboard {
     position: absolute;
-    right: calc(100% + 40px); /* Anchor exactly to board left edge */
+    right: calc(100% + 25px); /* Small fixed gap to stay on screen */
     top: 50%;
     transform: translateY(-50%);
-    width: 270px;
+    width: 240px;
     padding: 24px 20px;
     border-radius: 24px;
     background: linear-gradient(135deg, rgba(15, 15, 25, 0.9) 0%, rgba(5, 5, 10, 0.95) 100%);
@@ -383,6 +383,7 @@ main {
         inset 0 1px 0 rgba(255,255,255,0.05);
     z-index: 10;
 }
+
 
 @media (max-width: 1440px) {
     .leaderboard {
