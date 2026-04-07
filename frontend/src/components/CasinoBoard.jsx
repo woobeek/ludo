@@ -126,8 +126,6 @@ export default function CasinoBoard() {
 
     return (
         <div className={`casino-board glass-panel ${isOwner ? 'is-owner' : ''}`}>
-            <Mascot />
-            
             <div className="board-inner">
                 <div className="machine-header">
                     <h2 className="neon-title">PROVABLY FAIR SLOTS</h2>
@@ -270,6 +268,7 @@ export default function CasinoBoard() {
                     </div>
 
                     <div className="action-station">
+                        <Mascot />
                         <button 
                             id="spin-btn" 
                             className={`spin-btn ${!isConnected ? 'locked' : ''} ${isSpinning ? 'spinning' : ''}`} 
@@ -338,8 +337,6 @@ export default function CasinoBoard() {
                         </div>
                     </div>
                 )}
-
-
             </div>
         </div>
     );

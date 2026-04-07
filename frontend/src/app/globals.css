@@ -270,8 +270,8 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -75px; /* Final requested adjustment (+10px from -85px) */
-    right: -244px; /* Verified horizontal touch */
+    bottom: -100px; /* Re-anchored to button: moves with session bar */
+    right: -195px; /* Re-anchored to button: moves with session bar */
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -752,7 +752,11 @@ main {
     text-shadow: 0 0 10px rgba(255,215,0,0.3);
 }
 
-.action-station { flex: 1.5; height: 110px; }
+.action-station { 
+    flex: 1.5; 
+    height: 110px; 
+    position: relative; /* Anchor for Mascot */
+}
 
 .spin-btn {
     width: 100%;
