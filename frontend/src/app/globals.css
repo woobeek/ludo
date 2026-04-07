@@ -270,8 +270,8 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -100px; /* Re-anchored to button: moves with session bar */
-    right: -195px; /* Re-anchored to button: moves with session bar */
+    bottom: 10px !important; /* Stand level with buttons */
+    right: -130px !important; /* Close to button edge for precise targeting */
     z-index: 20;
     display: flex;
     flex-direction: column;
