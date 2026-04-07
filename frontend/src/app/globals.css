@@ -246,26 +246,16 @@ body {
 main {
     flex: 1;
     display: flex;
-    flex-direction: row;
     justify-content: center;
-    align-items: center; /* Vertical center both components */
-    gap: 50px; /* Comfortable gap between sidebar and board */
-    padding: 100px 30px;
-    max-width: 1360px; /* Hugs the components together */
-    margin: 0 auto;
+    align-items: center;
+    padding: 100px 40px;
     width: 100%;
     position: relative;
     z-index: 2;
-    animation: mainFadeIn 1s cubic-bezier(0.2, 0, 0.2, 1) forwards;
-}
-
-@keyframes mainFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .casino-board {
-    position: relative;
+    position: relative; /* This is now the anchor for the wings */
     border-radius: 28px;
     padding: 2px;
     width: 100%;
@@ -281,7 +271,7 @@ main {
 .mascot-container {
     position: absolute;
     bottom: -40px;
-    right: -220px;
+    left: calc(100% + 20px); /* Anchor to board's right edge */
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -378,8 +368,11 @@ main {
 
 /* ============ LEADERBOARD ============ */
 .leaderboard {
+    position: absolute;
+    right: calc(100% + 50px); /* Anchor to board's left edge */
+    top: 50%;
+    transform: translateY(-50%);
     width: 270px;
-    flex-shrink: 0;
     padding: 24px 20px;
     border-radius: 24px;
     z-index: 50;
@@ -392,17 +385,26 @@ main {
         inset 0 0 15px rgba(255, 215, 0, 0.03);
     animation: sideSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
     opacity: 0;
-    transform: translateX(-20px);
 }
 
 @keyframes sideSlideIn {
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; transform: translateX(-20px) translateY(-50%); }
+    to { opacity: 1; transform: translateX(0) translateY(-50%); }
 }
 
-@media (max-width: 1200px) {
-    main { flex-direction: column; align-items: center; gap: 30px; padding-top: 120px; }
-    .leaderboard { width: 100%; max-width: 880px; order: 2; }
-    .casino-board { order: 1; }
+@media (max-width: 1460px) {
+    .leaderboard {
+        right: auto;
+        left: 20px;
+        top: 20px;
+        transform: none;
+        position: fixed;
+        width: 250px;
+    }
+    @keyframes sideSlideIn {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
 }
 
 
