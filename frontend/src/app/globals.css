@@ -246,12 +246,22 @@ body {
 main {
     flex: 1;
     display: flex;
+    flex-direction: row;
     justify-content: center;
-    align-items: center;
-    padding: 80px 20px 40px;
+    align-items: center; /* Vertical center both components */
+    gap: 50px; /* Comfortable gap between sidebar and board */
+    padding: 100px 30px;
+    max-width: 1360px; /* Hugs the components together */
+    margin: 0 auto;
     width: 100%;
     position: relative;
     z-index: 2;
+    animation: mainFadeIn 1s cubic-bezier(0.2, 0, 0.2, 1) forwards;
+}
+
+@keyframes mainFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .casino-board {
@@ -368,18 +378,31 @@ main {
 
 /* ============ LEADERBOARD ============ */
 .leaderboard {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 280px;
-    padding: 20px;
-    border-radius: 20px;
+    width: 270px;
+    flex-shrink: 0;
+    padding: 24px 20px;
+    border-radius: 24px;
     z-index: 50;
-    background: rgba(8, 8, 14, 0.85);
-    border: 1px solid var(--glass-border);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    background: linear-gradient(135deg, rgba(15, 15, 25, 0.9) 0%, rgba(5, 5, 10, 0.95) 100%);
+    border: 1px solid rgba(255, 215, 0, 0.12);
+    backdrop-filter: blur(24px);
+    box-shadow: 
+        0 20px 60px rgba(0,0,0,0.8), 
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        inset 0 0 15px rgba(255, 215, 0, 0.03);
+    animation: sideSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+@keyframes sideSlideIn {
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 1200px) {
+    main { flex-direction: column; align-items: center; gap: 30px; padding-top: 120px; }
+    .leaderboard { width: 100%; max-width: 880px; order: 2; }
+    .casino-board { order: 1; }
 }
 
 
