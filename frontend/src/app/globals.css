@@ -270,8 +270,8 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -85px !important; /* Visual Audit Fix: Finger on button edge */
-    right: -244px !important; /* Visual Audit Fix: Finger on button edge */
+    bottom: -75px; /* Final requested adjustment (+10px from -85px) */
+    right: -244px; /* Verified horizontal touch */
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -752,11 +752,11 @@ main {
     text-shadow: 0 0 10px rgba(255,215,0,0.3);
 }
 
-.action-station { flex: 1.5; }
+.action-station { flex: 1.5; height: 110px; }
 
 .spin-btn {
     width: 100%;
-    height: 100%;
+    height: 100px; /* Fixed height for stable mascot targeting */
     border-radius: 18px;
     border: none;
     padding: 4px;
@@ -764,7 +764,7 @@ main {
     cursor: pointer;
     transition: all 0.18s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
-    box-shadow: 0 14px 0 #070710, 0 18px 24px rgba(0,0,0,0.6);
+    box-shadow: 0 12px 0 #070710, 0 16px 20px rgba(0,0,0,0.6);
 }
 
 .spin-btn-inner {
@@ -809,7 +809,7 @@ main {
 }
 
 .spin-btn:not(.locked):active, .spin-btn.spinning {
-    transform: translateY(10px);
+    transform: translateY(2px); /* Subtler press to maintain mascot alignment */
     box-shadow: 0 4px 0 #8B5E05, 0 8px 15px rgba(255,215,0,0.3);
     animation: none;
 }
