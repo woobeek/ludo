@@ -176,18 +176,18 @@ body {
 }
 
 .stat-box .label { 
-    font-size: 9px; 
+    font-size: 10px; 
     color: var(--red); 
-    letter-spacing: 2.5px; 
+    letter-spacing: 3px; 
     font-weight: 700; 
     text-transform: uppercase;
+    margin-bottom: 2px;
 }
 .stat-box .value { 
     font-family: 'Syncopate', sans-serif; 
-    font-size: 16px; 
+    font-size: 18px; 
     color: #fff; 
-    text-shadow: 0 0 12px var(--red-glow); 
-    animation: statPulse 3s ease-in-out infinite;
+    text-shadow: 0 0 15px var(--red-glow);
 }
 
 @keyframes statPulse {
@@ -248,8 +248,10 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 24px;
-    perspective: 1200px;
+    padding: 80px 20px 40px;
+    width: 100%;
+    position: relative;
+    z-index: 2;
 }
 
 .casino-board {
@@ -257,9 +259,8 @@ main {
     border-radius: 28px;
     padding: 2px;
     width: 100%;
-    max-width: 920px;
+    max-width: 880px;
     background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(153,69,255,0.08), rgba(255,215,0,0.05));
-    transform: rotateX(1.5deg);
     box-shadow: 
         0 40px 80px rgba(0,0,0,0.7),
         0 0 120px rgba(255,215,0,0.06),
@@ -269,8 +270,8 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -35px;
-    right: -255px;
+    bottom: -40px;
+    right: -220px;
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -368,11 +369,11 @@ main {
 /* ============ LEADERBOARD ============ */
 .leaderboard {
     position: absolute;
-    left: -310px;
+    left: 20px;
     top: 50%;
     transform: translateY(-50%);
-    width: 290px;
-    padding: 22px;
+    width: 280px;
+    padding: 20px;
     border-radius: 20px;
     z-index: 50;
     background: rgba(8, 8, 14, 0.85);
@@ -380,6 +381,7 @@ main {
     backdrop-filter: blur(20px);
     box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
 }
+
 
 .leaderboard-title {
     font-family: 'Syncopate', sans-serif;

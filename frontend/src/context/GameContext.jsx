@@ -113,6 +113,7 @@ export function GameProvider({ children }) {
                 setDevProfit(amount);
             }
 
+            setTotalBurned(burnedCount);
         } catch (error) {
             console.error('❌ Error fetching blockchain data:', error);
         }
