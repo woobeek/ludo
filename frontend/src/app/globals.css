@@ -270,8 +270,8 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: -56px; /* Verified precision touch for 380px size */
-    right: -152px; /* Verified precision touch for 380px size */
+    bottom: -118px; /* Finger 'lays' on the bottom-right edge of the button */
+    right: -202px; /* Finger aims at 'I'/'N' in 'SPIN' */
     z-index: 20;
     display: flex;
     flex-direction: column;
@@ -285,8 +285,6 @@ main {
     height: auto;
     filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
 }
-
-.is-owner .mascot-container { bottom: 90px; }
 
 .mascot-img {
     width: 380px;
