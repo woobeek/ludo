@@ -270,18 +270,19 @@ main {
 /* ============ MASCOT ============ */
 .mascot-container {
     position: absolute;
-    bottom: 25px; /* Adjusted for smaller size */
-    right: -190px; /* Adjusted for smaller size to keep finger on SPIN */
+    bottom: 40px;
+    right: -340px; /* Pushed further out to clear the SPIN button completely */
+    width: 380px;  /* Shrinked for premium aesthetic */
     z-index: 20;
     display: flex;
     flex-direction: column;
     align-items: center;
     animation: mascotFloat 5s ease-in-out infinite;
-    pointer-events: none;
+    pointer-events: none; /* Crucial: ensures rabbit never blocks clicks */
 }
 
 .mascot-container img {
-    width: 380px; /* Slightly smaller as requested */
+    width: 380px;
     height: auto;
     filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
 }
@@ -374,9 +375,9 @@ main {
 
 /* ============ LEADERBOARD ============ */
 .leaderboard {
-    position: absolute;
-    left: -270px; /* Closer to slots for 1424px screen visibility */
-    top: 32%;      /* Align with reel top edge */
+    position: fixed; /* Fixed for absolute stability across all sizes */
+    left: 20px;
+    top: 32%;
     width: 250px;
     padding: 24px 20px;
     border-radius: 24px;
@@ -386,8 +387,9 @@ main {
     box-shadow: 
         0 20px 60px rgba(0,0,0,0.8), 
         inset 0 1px 0 rgba(255,255,255,0.05);
-    z-index: 10;
+    z-index: 100;
 }
+
 
 
 
