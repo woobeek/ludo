@@ -1,9 +1,12 @@
 'use client';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { useSlots } from '../hooks/useSlots';
+import { useSessionWallet } from '../hooks/useSessionWallet';
 import { useWallet } from '@solana/wallet-adapter-react';
 import Mascot from './Mascot';
+
+const PRESET_DEPOSITS = [1000, 5000, 10000, 25000];
 
 export default function CasinoBoard() {
     const { isConnected, statusScreenHtml, initAudio, playSound, devProfit } = useGame();
@@ -16,6 +19,11 @@ export default function CasinoBoard() {
     const reel3Ref = useRef(null);
     const winningLineRef = useRef(null);
 
+    // Session wallet (ephemeral keypair — zero popups during play)
+    const sessionWallet = useSessionWallet();
+    const [depositInput, setDepositInput] = useState(5000);
+    const [showDepositPanel, setShowDepositPanel] = useState(false);
+
     const {
         betAmount, setBetAmount,
         autoSpinsCount, setAutoSpinsCount,
@@ -23,9 +31,8 @@ export default function CasinoBoard() {
         autoSpinActive, setAutoSpinActive,
         performSpin,
         provablyFairState
-    } = useSlots([reel1Ref, reel2Ref, reel3Ref], winningLineRef);
+    } = useSlots([reel1Ref, reel2Ref, reel3Ref], winningLineRef, sessionWallet);
 
-    // Initialize audio on first click on the document/board
     useEffect(() => {
         const handleInit = () => initAudio();
         document.body.addEventListener('click', handleInit, { once: true });
@@ -36,36 +43,25 @@ export default function CasinoBoard() {
         playSound('click');
         if (betAmount < 5000) setBetAmount(prev => prev + 50);
     };
-
     const handleBetDown = () => {
         playSound('click');
         if (betAmount > 50) setBetAmount(prev => prev - 50);
     };
-
     const handleAutoUp = () => {
         playSound('click');
         if (autoSpinsCount < 100) setAutoSpinsCount(prev => prev + 1);
     };
-
     const handleAutoDown = () => {
         playSound('click');
         if (autoSpinsCount > 0) setAutoSpinsCount(prev => prev - 1);
     };
 
     const autoSpinActiveRef = useRef(false);
-    useEffect(() => {
-        autoSpinActiveRef.current = autoSpinActive;
-    }, [autoSpinActive]);
-
+    useEffect(() => { autoSpinActiveRef.current = autoSpinActive; }, [autoSpinActive]);
     const isConnectedRef = useRef(false);
-    useEffect(() => {
-        isConnectedRef.current = isConnected;
-    }, [isConnected]);
-
+    useEffect(() => { isConnectedRef.current = isConnected; }, [isConnected]);
     const performSpinRef = useRef(performSpin);
-    useEffect(() => {
-        performSpinRef.current = performSpin;
-    }, [performSpin]);
+    useEffect(() => { performSpinRef.current = performSpin; }, [performSpin]);
 
     const handleActualSpinClick = async () => {
         if (!isConnected) return;
@@ -114,6 +110,20 @@ export default function CasinoBoard() {
         }
     };
 
+    const handleStartSession = async () => {
+        playSound('click');
+        const success = await sessionWallet.startSession(depositInput);
+        if (success) {
+            setShowDepositPanel(false);
+            playSound('win');
+        }
+    };
+
+    const handleEndSession = async () => {
+        playSound('click');
+        await sessionWallet.endSession();
+    };
+
     return (
         <div className={`casino-board glass-panel ${isOwner ? 'is-owner' : ''}`}>
             <Mascot />
@@ -144,6 +154,93 @@ export default function CasinoBoard() {
                         </div>
                     </div>
                 </div>
+
+                {/* SESSION WALLET PANEL */}
+                {isConnected && (
+                    <div className="session-panel glass-panel">
+                        {!sessionWallet.sessionActive ? (
+                            <>
+                                <div className="session-info">
+                                    <span className="session-icon">⚡</span>
+                                    <div className="session-text">
+                                        <span className="session-title">NO-POPUP SESSION</span>
+                                        <span className="session-desc">Deposit once, spin freely — no wallet confirmations</span>
+                                    </div>
+                                </div>
+
+                                {showDepositPanel ? (
+                                    <div className="deposit-controls">
+                                        <div className="deposit-presets">
+                                            {PRESET_DEPOSITS.map(p => (
+                                                <button
+                                                    key={p}
+                                                    className={`preset-btn ${depositInput === p ? 'active' : ''}`}
+                                                    onClick={() => { setDepositInput(p); playSound('click'); }}
+                                                >
+                                                    {p.toLocaleString()}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="deposit-row">
+                                            <input
+                                                type="number"
+                                                className="deposit-input"
+                                                value={depositInput}
+                                                onChange={e => setDepositInput(Number(e.target.value))}
+                                                min={500}
+                                                step={500}
+                                            />
+                                            <span className="deposit-currency">$LUDO</span>
+                                        </div>
+                                        <div className="deposit-actions">
+                                            <button
+                                                className="session-btn session-btn-cancel"
+                                                onClick={() => setShowDepositPanel(false)}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                className="session-btn session-btn-start"
+                                                onClick={handleStartSession}
+                                                disabled={sessionWallet.isStartingSession || depositInput < 500}
+                                            >
+                                                {sessionWallet.isStartingSession ? '⏳ Starting...' : '⚡ Start Session'}
+                                            </button>
+                                        </div>
+                                        {sessionWallet.sessionError && (
+                                            <p className="session-error">{sessionWallet.sessionError}</p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button
+                                        className="session-btn session-btn-start"
+                                        onClick={() => setShowDepositPanel(true)}
+                                    >
+                                        ⚡ Start Session
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            /* Active session display */
+                            <div className="session-active">
+                                <div className="session-active-info">
+                                    <span className="session-badge">⚡ SESSION ACTIVE</span>
+                                    <span className="session-balance">
+                                        {sessionWallet.sessionBalance.toLocaleString()}
+                                        <span className="session-bal-currency"> $LUDO</span>
+                                    </span>
+                                </div>
+                                <button
+                                    className="session-btn session-btn-end"
+                                    onClick={handleEndSession}
+                                    disabled={sessionWallet.isEndingSession}
+                                >
+                                    {sessionWallet.isEndingSession ? '⏳ Returning funds...' : '🏁 End Session'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="control-deck">
                     <div className="bet-station glass-panel">
@@ -184,7 +281,11 @@ export default function CasinoBoard() {
                                     {!isConnected ? 'LOCKED' : autoSpinActive ? 'STOP' : 'SPIN'}
                                 </span>
                                 <span className="spin-subtext">
-                                    {!isConnected ? 'CONNECT WALLET' : autoSpinActive ? `${autoSpinsCount} SPINS LEFT` : 'PLACE BET'}
+                                    {!isConnected
+                                        ? 'CONNECT WALLET'
+                                        : autoSpinActive
+                                            ? `${autoSpinsCount} SPINS LEFT`
+                                            : 'PLACE BET'}
                                 </span>
                             </div>
                         </button>
@@ -203,14 +304,42 @@ export default function CasinoBoard() {
                     <span className="pf-nonce">Nonce: {provablyFairState.nonce}</span>
                 </div>
 
-                {isOwner && (
-                    <div className="owner-dashboard glass-panel">
-                        <span className="owner-label">👑 MY REVENUE</span>
-                        <div className="owner-profit">
-                            <span className="profit-amount">+{devProfit.toLocaleString()} <span className="profit-currency">$LUDO</span></span>
+                {isConnected && (
+                    <div className="referral-dashboard glass-panel">
+                        <div className="ref-header">
+                            <span className="ref-title">🤝 INVITE & EARN</span>
+                            <span className="ref-desc">Earn 0.5% of every spin from players you invite!</span>
+                        </div>
+                        <div className="ref-actions">
+                            <button 
+                                className="ref-btn share-x" 
+                                onClick={() => {
+                                    playSound('click');
+                                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+                                    const refLink = `${baseUrl}/?ref=${publicKey.toBase58()}`;
+                                    const text = encodeURIComponent(`I'm playing $LUDO Casino! The ONLY fully on-chain casino that BURNS 3% of every spin 🔥\n\nPlay with my link and let's win together 👇\n${refLink}`);
+                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                                }}
+                            >
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 4.15H5.039z"/></svg>
+                                SHARE ON X
+                            </button>
+                            <button 
+                                className="ref-btn copy-link" 
+                                onClick={() => {
+                                    playSound('click');
+                                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+                                    navigator.clipboard.writeText(`${baseUrl}/?ref=${publicKey.toBase58()}`);
+                                    alert('Referral link copied!');
+                                }}
+                            >
+                                📋 COPY LINK
+                            </button>
                         </div>
                     </div>
                 )}
+
+
             </div>
         </div>
     );

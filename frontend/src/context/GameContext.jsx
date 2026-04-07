@@ -125,6 +125,22 @@ export function GameProvider({ children }) {
         }
     }, [isConnected, fetchBalance]);
 
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const ref = params.get('ref');
+            if (ref) {
+                try {
+                    // Validate basic length
+                    if (ref.length > 30) {
+                        localStorage.setItem('ludo_referrer', ref);
+                        console.log('Referrer tracking active:', ref);
+                    }
+                } catch (e) {}
+            }
+        }
+    }, []);
+
     const updateBalance = useCallback((amount) => setBalance(prev => prev + amount), []);
     const updateBurned = useCallback((amount) => setTotalBurned(prev => prev + amount), []);
 
@@ -140,22 +156,44 @@ export function GameProvider({ children }) {
 
     // We remove the hardcoded connectPhantom function as WalletModal handles connection directly.
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const chars = 'abcdef0123456789';
-            let addr = '';
-            for (let i = 0; i < 4; i++) addr += chars[Math.floor(Math.random() * chars.length)];
-            const isBurn = Math.random() > 0.3;
-            const amount = [50, 100, 500, 1000][Math.floor(Math.random() * 4)];
+    const [feedQueue, setFeedQueue] = useState([]);
 
-            if (isBurn) {
-                setMockTx({ text: `Wallet ${addr}... just burned ${amount} $LUDO! 🔥`, color: 'var(--text-muted)' });
-            } else {
-                setMockTx({ text: `Wallet ${addr}... won ${amount * 5} $LUDO! 💰`, color: 'var(--gold)' });
+    useEffect(() => {
+        // Fetch real feed from DB initially and every 10s
+        const fetchFeed = async () => {
+            try {
+                const res = await fetch('/api/feed');
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    setFeedQueue(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch live feed", e);
             }
-        }, 4000);
-        return () => clearInterval(interval);
+        };
+        fetchFeed();
+        const fetchInterval = setInterval(fetchFeed, 10000);
+        return () => clearInterval(fetchInterval);
     }, []);
+
+    useEffect(() => {
+        if (feedQueue.length === 0) return;
+        
+        let displayIndex = 0;
+        const interval = setInterval(() => {
+            const currentItem = feedQueue[displayIndex];
+            
+            if (currentItem.isWin) {
+                setMockTx({ text: `Wallet ${currentItem.wallet} won ${currentItem.amount.toLocaleString()} $LUDO! 💰`, color: 'var(--gold)' });
+            } else {
+                setMockTx({ text: `Wallet ${currentItem.wallet} burned ${currentItem.amount.toLocaleString()} $LUDO! 🔥`, color: 'var(--text-muted)' });
+            }
+            
+            displayIndex = (displayIndex + 1) % Math.min(feedQueue.length, 10); // Rotate top 10 recent
+        }, 4000);
+        
+        return () => clearInterval(interval);
+    }, [feedQueue]);
 
     const value = {
         initAudio,

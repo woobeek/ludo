@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { generateSeed, generateSpinResult, generateHash } from '../utils/provablyFair';
 import { PublicKey, Transaction } from '@solana/web3.js';
-import { createTransferCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
+import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 
 const LUDO_MINT = new PublicKey('Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG');
@@ -12,7 +12,7 @@ const TREASURY_WALLET = new PublicKey('EZM3xXLxtCGD4uBXRjd1cre5h79isyJKxptKorKvP
 const SYMBOLS = ['🪙', '🍒', '7️⃣', '💎', '🚀'];
 const MULTIPLIERS = { '7️⃣': 20, '💎': 10, '🚀': 5, '🪙': 3, '🍒': 2 };
 
-export function useSlots(reelRefs, winningLineRef) {
+export function useSlots(reelRefs, winningLineRef, sessionWallet) {
     const { isConnected, balance, updateBalance, updateBurned, playSound, setStatusScreenHtml, setMascotState } = useGame();
     const { connection } = useConnection();
     const { publicKey, sendTransaction } = useWallet();
@@ -30,7 +30,6 @@ export function useSlots(reelRefs, winningLineRef) {
     const [currentServerHash, setCurrentServerHash] = useState('');
 
     const DEV_WALLET = new PublicKey('HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV');
-    const BURN_ADDRESS = new PublicKey('11111111111111111111111111111111');
 
     useEffect(() => {
         const sSeed = generateSeed();
@@ -69,7 +68,12 @@ export function useSlots(reelRefs, winningLineRef) {
 
     const performSpin = async () => {
         if (!isConnected || !publicKey) return false;
-        if (betAmount > balance) {
+
+        // --- Determine active balance source ---
+        const useSession = sessionWallet?.sessionActive;
+        const activeBalance = useSession ? sessionWallet.sessionBalance : balance;
+
+        if (betAmount > activeBalance) {
             setStatusScreenHtml({ text: 'INSUFFICIENT $LUDO BALANCE', type: 'lose' });
             playSound('lose');
             setAutoSpinActive(false);
@@ -79,37 +83,73 @@ export function useSlots(reelRefs, winningLineRef) {
         setIsSpinning(true);
         if (winningLineRef.current) winningLineRef.current.classList.remove('active');
         
-        setStatusScreenHtml({ text: 'WAITING FOR APPROVAL...', type: 'normal' });
-        
         try {
-            // ---- SMART REVENUE SPLITTER ----
-            const fromATA = await getAssociatedTokenAddress(LUDO_MINT, publicKey);
-            const treasuryATA = await getAssociatedTokenAddress(LUDO_MINT, TREASURY_WALLET);
-            const devATA = await getAssociatedTokenAddress(LUDO_MINT, DEV_WALLET);
-            
-            // Calculating splits: 92% Treasury, 5% Developer, 3% Burn (sent to treasury for now as 'Tax')
-            const totalLamports = Math.floor(betAmount * 1_000_000);
-            const devAmount = Math.floor(totalLamports * 0.05);
-            const burnAmount = Math.floor(totalLamports * 0.03); // For calculation
-            const treasuryAmount = totalLamports - devAmount; // Treasury holds the 3% 'Burn' for periodic clearing
+            if (useSession) {
+                // ✅ SESSION MODE: No wallet popup — signed by ephemeral keypair
+                setStatusScreenHtml({ text: 'SPINNING (SESSION)...', type: 'normal' });
+                await sessionWallet.sendSessionSpinTransaction(betAmount);
+            } else {
+                // 🔓 DIRECT MODE: Regular wallet approval (fallback)
+                setStatusScreenHtml({ text: 'WAITING FOR APPROVAL...', type: 'normal' });
 
-            const transaction = new Transaction().add(
-                createTransferCheckedInstruction(
-                    fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6
-                ),
-                createTransferCheckedInstruction(
-                    fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6
-                )
-            );
+                const fromATA = await getAssociatedTokenAddress(LUDO_MINT, publicKey);
+                const treasuryATA = await getAssociatedTokenAddress(LUDO_MINT, TREASURY_WALLET);
+                const devATA = await getAssociatedTokenAddress(LUDO_MINT, DEV_WALLET);
+                
+                // TRUE DEFLATIONARY SPLIT: 92% Treasury | 5% Dev | 3% Burned forever 🔥
+                const totalLamports = Math.floor(betAmount * 1_000_000);
+                const burnAmount = Math.floor(totalLamports * 0.03);  // 3% BURNED
+                
+                let devAmount = Math.floor(totalLamports * 0.05);   // 5% to Dev
+                let refAmount = 0;
+                let refATA = null;
 
-            const signature = await sendTransaction(transaction, connection);
-            setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
-            
-            const latestBlockhash = await connection.getLatestBlockhash();
-            await connection.confirmTransaction({
-                signature,
-                ...latestBlockhash
-            }, 'confirmed');
+                const referrerStr = typeof window !== 'undefined' ? localStorage.getItem('ludo_referrer') : null;
+                if (referrerStr && referrerStr !== publicKey.toBase58()) {
+                    try {
+                        const refPubkey = new PublicKey(referrerStr);
+                        refATA = await getAssociatedTokenAddress(LUDO_MINT, refPubkey);
+                        refAmount = Math.floor(totalLamports * 0.005); // 0.5% to Referrer
+                        devAmount -= refAmount; // Dev keeps 4.5%
+                    } catch (e) {
+                        console.warn('Invalid referrer', e);
+                    }
+                }
+
+                const treasuryAmount = totalLamports - devAmount - burnAmount - refAmount; // 92% to Treasury
+
+                const transaction = new Transaction().add(
+                    // 92% → Treasury (holds winnings pool)
+                    createTransferCheckedInstruction(
+                        fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6
+                    ),
+                    // 4.5% or 5% → Dev wallet (revenue)
+                    createTransferCheckedInstruction(
+                        fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6
+                    ),
+                    // 3% → BURNED FOREVER (reduces $LUDO total supply on-chain)
+                    createBurnCheckedInstruction(
+                        fromATA, LUDO_MINT, publicKey, burnAmount, 6
+                    )
+                );
+
+                if (refAmount > 0 && refATA) {
+                    transaction.add(
+                        createTransferCheckedInstruction(
+                            fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6
+                        )
+                    );
+                }
+
+                const signature = await sendTransaction(transaction, connection);
+                setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
+                
+                const latestBlockhash = await connection.getLatestBlockhash();
+                await connection.confirmTransaction({
+                    signature,
+                    ...latestBlockhash
+                }, 'confirmed');
+            }
             
             updateBalance(-betAmount);
             setSessionSpins(prev => prev + 1);
@@ -122,11 +162,10 @@ export function useSlots(reelRefs, winningLineRef) {
         }
 
         // ---- ADAPTIVE RTP (BAIT & HARVEST) ----
-        // Base threshold logic: whales and long sessions get lower RTP
         let difficultyMultiplier = 1.0;
-        if (betAmount > 1000) difficultyMultiplier = 0.95; // Whale tax: -5% win chance
-        if (betAmount > 10000) difficultyMultiplier = 0.90; // Leviathan tax: -10% win chance
-        if (sessionSpins > 50) difficultyMultiplier *= 0.98; // Fatigue: slight decrease for long sessions
+        if (betAmount > 1000) difficultyMultiplier = 0.95;
+        if (betAmount > 10000) difficultyMultiplier = 0.90;
+        if (sessionSpins > 50) difficultyMultiplier *= 0.98;
         
         const spinPhrases = [
             "Let's gooo!", "Fingers crossed!", "Big win incoming...", "Spinning...", "Come on, jackpot!"
@@ -139,9 +178,8 @@ export function useSlots(reelRefs, winningLineRef) {
         let winningSymbol = outcome.winningSymbol;
         const hash = outcome.hash;
 
-        // Apply Adaptive RTP adjustment
         if (winningSymbol && Math.random() > difficultyMultiplier) {
-            console.log(`🎰 Adaptive RTP: Winning spin adjusted to loss to ensure House Edge (Diff: ${difficultyMultiplier})`);
+            console.log(`🎰 Adaptive RTP: Winning spin adjusted to loss (Diff: ${difficultyMultiplier})`);
             winningSymbol = null; 
         }
 
@@ -183,6 +221,13 @@ export function useSlots(reelRefs, winningLineRef) {
             setMascotState(prev => ({ ...prev, mode: 'win' }));
             setTimeout(() => setMascotState(prev => ({ ...prev, mode: 'idle' })), 500);
             showMascotMessage(winPhrases[Math.floor(Math.random() * winPhrases.length)], 4000);
+            
+            // Record Win to DB
+            fetch('/api/spin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet: publicKey.toBase58(), amount: winAmount, isWin: true, type: 'spin' })
+            }).catch(e => console.error("Failed to record spin", e));
         } else {
             updateBurned(betAmount);
             playSound('lose');
@@ -193,6 +238,13 @@ export function useSlots(reelRefs, winningLineRef) {
             setMascotState(prev => ({ ...prev, mode: 'lose' }));
             setTimeout(() => setMascotState(prev => ({ ...prev, mode: 'idle' })), 500);
             showMascotMessage(losePhrases[Math.floor(Math.random() * losePhrases.length)], 3000);
+            
+            // Record Burn to DB
+            fetch('/api/spin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet: publicKey.toBase58(), amount: betAmount, isWin: false, type: 'burn' })
+            }).catch(e => console.error("Failed to record burn", e));
         }
 
         setIsSpinning(false);

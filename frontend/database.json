@@ -1,0 +1,25 @@
+{
+  "topWins": [
+    {
+      "wallet": "8xK9...2mP",
+      "amount": 250000
+    },
+    {
+      "wallet": "D7fE...3aB",
+      "amount": 150000
+    },
+    {
+      "wallet": "4vNx...9qL",
+      "amount": 85000
+    },
+    {
+      "wallet": "1aBc...7zY",
+      "amount": 40000
+    },
+    {
+      "wallet": "9pRt...5wK",
+      "amount": 20000
+    }
+  ],
+  "feed": []
+}
