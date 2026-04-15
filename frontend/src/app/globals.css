@@ -671,7 +671,7 @@ main {
 
 /* ============ MISC / SESSION / RESPONSIVE ============ */
 @media (max-width: 1200px) {
-    .recent-activity-sidebar { display: none; }
+    .recent-activity-sidebar, .leaderboard-sidebar { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -680,12 +680,14 @@ main {
     .control-deck { flex-direction: column; gap: 12px; }
     .bet-station, .auto-bet-station { width: 100%; min-width: unset; }
     .action-station { order: -1; width: 100%; margin-top: 15px; }
-    .mascot-container { bottom: -20px; right: -20px; }
-    .mascot-img { height: clamp(90px, 20vw, 130px); }
-    main { padding: 20px 15px; }
+    .mascot-container { bottom: -20px; right: -10px; }
+    .mascot-img { height: clamp(70px, 15vw, 100px); }
+    main { padding: 50px 10px 20px 10px; }
     .casino-board { padding: 10px; }
-    .reels-window { gap: 4px; padding: 10px; height: clamp(160px, 25vh, 220px); }
-    .symbol-container { font-size: clamp(1.2rem, 5vw, 2rem); }
+    .reels-window { gap: 4px; padding: 10px; height: clamp(140px, 20vh, 180px); }
+    .symbol-container { font-size: clamp(1rem, 4vw, 1.5rem); }
+    .jackpot-display { padding: 8px 16px; }
+    .jp-amount { font-size: clamp(16px, 3vw, 24px); }
 }
 
 /* ============ SESSION PANEL (RESTORED & REDESIGNED) ============ */
