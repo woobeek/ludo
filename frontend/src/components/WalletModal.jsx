@@ -14,11 +14,12 @@ export default function WalletModal() {
     if (!showWalletModal) return null;
 
     return (
-        <div id="wallet-modal" className="modal">
+        <div id="wallet-modal" className="modal shadow-2xl">
             <div className="modal-backdrop" onClick={() => setShowWalletModal(false)}></div>
             <div className="modal-card glass-panel">
-                <h3 className="modal-title">Select Wallet</h3>
-                <p className="modal-subtitle">Connect to Web3 to start playing</p>
+                <button className="close-modal" onClick={() => setShowWalletModal(false)}>✕</button>
+                <h3 className="modal-title">CONNECT WALLET</h3>
+                <p className="modal-subtitle">Select your preferred Solana wallet</p>
                 <div className="wallet-options">
                     {wallets.map((wallet) => (
                         <button 
@@ -27,16 +28,15 @@ export default function WalletModal() {
                             onClick={() => handleWalletClick(wallet.adapter.name)}
                         >
                             <div className="wallet-icon">
-                                <img src={wallet.adapter.icon} alt={`${wallet.adapter.name} icon`} />
+                                <img src={wallet.adapter.icon} alt={wallet.adapter.name} />
                             </div>
                             <span className="wallet-name">{wallet.adapter.name}</span>
                             <span className="wallet-status">
-                                {wallet.readyState === 'Installed' ? 'Detected' : 'Available'}
+                                {wallet.readyState === 'Installed' ? 'Installed' : 'Available'}
                             </span>
                         </button>
                     ))}
                 </div>
-                <button className="close-modal" onClick={() => setShowWalletModal(false)}>✕</button>
             </div>
         </div>
     );

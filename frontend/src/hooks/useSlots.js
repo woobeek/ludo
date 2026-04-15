@@ -1,18 +1,40 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { generateSeed, generateSpinResult, generateHash } from '../utils/provablyFair';
+import { generateSeed, generateSpinResult, generateHash, SYMBOLS } from '../utils/provablyFair';
 import { PublicKey, Transaction } from '@solana/web3.js';
-import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
+import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 
-const LUDO_MINT = new PublicKey('Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG');
-const TREASURY_WALLET = new PublicKey('EZM3xXLxtCGD4uBXRjd1cre5h79isyJKxptKorKvPuyU');
+// All addresses from env — easy to update after pump.fun launch
+const LUDO_MINT = new PublicKey(process.env.NEXT_PUBLIC_LUDO_MINT);
+const TREASURY_WALLET = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_WALLET);
+const DEV_WALLET = new PublicKey(process.env.NEXT_PUBLIC_DEV_WALLET);
 
-const SYMBOLS = ['🪙', '🍒', '7️⃣', '💎', '🚀'];
-const MULTIPLIERS = { '7️⃣': 20, '💎': 10, '🚀': 5, '🪙': 3, '🍒': 2 };
+const PAYLINES = [
+    [1, 1, 1, 1, 1], // Middle
+    [0, 0, 0, 0, 0], // Top
+    [2, 2, 2, 2, 2], // Bottom
+    [0, 1, 2, 1, 0], // V
+    [2, 1, 0, 1, 2], // Inverted V
+    [1, 0, 0, 0, 1], // Zigzag 1
+    [1, 2, 2, 2, 1], // Zigzag 2
+    [0, 0, 1, 2, 2], // Step Down
+    [2, 2, 1, 0, 0], // Step Up
+    [1, 2, 1, 0, 1]  // W-shape
+];
 
-export function useSlots(reelRefs, winningLineRef, sessionWallet) {
+const PAYTABLE = {
+    '7️⃣': { 3: 20, 4: 70, 5: 300 },
+    '💎': { 3: 15, 4: 50, 5: 150 },
+    '🚀': { 3: 10, 4: 30, 5: 100 },
+    '🪙': { 3: 6, 4: 15, 5: 50 },
+    '🍒': { 3: 2.5, 4: 8, 5: 25 },
+    '👑': { 3: 50, 4: 150, 5: 600 }, // Wild matching itself
+    '⭐': { 3: 5, 4: 20, 5: 75 }    // Scatter pays multiplier on TOTAL bet
+};
+
+export function useSlots(reelRefs, sessionWallet) {
     const { isConnected, balance, updateBalance, updateBurned, playSound, setStatusScreenHtml, setMascotState } = useGame();
     const { connection } = useConnection();
     const { publicKey, sendTransaction } = useWallet();
@@ -22,54 +44,67 @@ export function useSlots(reelRefs, winningLineRef, sessionWallet) {
     const [isSpinning, setIsSpinning] = useState(false);
     const [autoSpinActive, setAutoSpinActive] = useState(false);
 
-    // Provably Fair & Adaptive Logic
+    const [grid, setGrid] = useState([
+        ['🍒', '🍒', '🍒'],
+        ['🪙', '🪙', '🪙'],
+        ['7️⃣', '7️⃣', '7️⃣'],
+        ['💎', '💎', '💎'],
+        ['🚀', '🚀', '🚀']
+    ]);
+    const [winningPositions, setWinningPositions] = useState([]);
+    const [winningLines, setWinningLines] = useState([]);
+
     const [serverSeed, setServerSeed] = useState('');
     const [clientSeed, setClientSeed] = useState('');
     const [nonce, setNonce] = useState(1);
-    const [sessionSpins, setSessionSpins] = useState(0);
     const [currentServerHash, setCurrentServerHash] = useState('');
 
-    const DEV_WALLET = new PublicKey('HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV');
-
     useEffect(() => {
-        const sSeed = generateSeed();
-        setServerSeed(sSeed);
+        // Fetch the initial server hash from our secure server
+        fetch('/api/fairness')
+            .then(res => res.json())
+            .then(data => {
+                setCurrentServerHash(data.hash);
+            });
         setClientSeed(generateSeed());
-        generateHash(sSeed).then(setCurrentServerHash);
     }, []);
-
-    const getRandomSymbol = () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
 
     const showMascotMessage = (msg, duration = 3000) => {
         setMascotState(prev => ({ ...prev, message: msg, showMessage: true }));
-        setTimeout(() => {
-            setMascotState(prev => ({ ...prev, showMessage: false }));
-        }, duration);
+        setTimeout(() => setMascotState(prev => ({ ...prev, showMessage: false })), duration);
     };
 
-    const animateReel = (reel, finalSymbol, duration) => {
+    const animateReel = (reelRef, finalSymbols, duration) => {
         return new Promise(resolve => {
             const spinSpeed = 40; 
-            reel.classList.add('blur');
+            const el = reelRef.current;
+            if (!el) return resolve();
+
+            el.classList.add('blur');
             
             const spinInterval = setInterval(() => {
-                reel.textContent = getRandomSymbol();
+                Array.from(el.children).forEach(child => {
+                    const symEl = child.querySelector('.symbol');
+                    if(symEl) symEl.textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+                });
                 playSound('spin');
             }, spinSpeed);
 
             setTimeout(() => {
                 clearInterval(spinInterval);
-                reel.classList.remove('blur');
-                reel.textContent = finalSymbol;
+                el.classList.remove('blur');
+                Array.from(el.children).forEach((child, idx) => {
+                    const symEl = child.querySelector('.symbol');
+                    if(symEl) symEl.textContent = finalSymbols[idx];
+                });
                 resolve();
             }, duration);
         });
     };
 
     const performSpin = async () => {
-        if (!isConnected || !publicKey) return false;
+        if (!isConnected || !publicKey) return { success: false, winAmount: 0 };
 
-        // --- Determine active balance source ---
         const useSession = sessionWallet?.sessionActive;
         const activeBalance = useSession ? sessionWallet.sessionBalance : balance;
 
@@ -77,30 +112,41 @@ export function useSlots(reelRefs, winningLineRef, sessionWallet) {
             setStatusScreenHtml({ text: 'INSUFFICIENT $LUDO BALANCE', type: 'lose' });
             playSound('lose');
             setAutoSpinActive(false);
-            return false;
+            return { success: false, winAmount: 0 };
         }
 
         setIsSpinning(true);
-        if (winningLineRef.current) winningLineRef.current.classList.remove('active');
+        setWinningPositions([]);
+        setWinningLines([]);
         
         try {
             if (useSession) {
-                // ✅ SESSION MODE: No wallet popup — signed by ephemeral keypair
                 setStatusScreenHtml({ text: 'SPINNING (SESSION)...', type: 'normal' });
                 await sessionWallet.sendSessionSpinTransaction(betAmount);
             } else {
-                // 🔓 DIRECT MODE: Regular wallet approval (fallback)
                 setStatusScreenHtml({ text: 'WAITING FOR APPROVAL...', type: 'normal' });
 
+                const transaction = new Transaction();
+
+                // Helper to ensure ATA exists
+                const ensureAta = async (mint, owner, payer) => {
+                    const ata = await getAssociatedTokenAddress(mint, owner);
+                    try {
+                        const account = await connection.getAccountInfo(ata);
+                        if (!account) {
+                            transaction.add(createAssociatedTokenAccountInstruction(payer, ata, owner, mint));
+                        }
+                    } catch (e) {}
+                    return ata;
+                };
+
                 const fromATA = await getAssociatedTokenAddress(LUDO_MINT, publicKey);
-                const treasuryATA = await getAssociatedTokenAddress(LUDO_MINT, TREASURY_WALLET);
-                const devATA = await getAssociatedTokenAddress(LUDO_MINT, DEV_WALLET);
+                const treasuryATA = await ensureAta(LUDO_MINT, TREASURY_WALLET, publicKey);
+                const devATA = await ensureAta(LUDO_MINT, DEV_WALLET, publicKey);
                 
-                // TRUE DEFLATIONARY SPLIT: 92% Treasury | 5% Dev | 3% Burned forever 🔥
                 const totalLamports = Math.floor(betAmount * 1_000_000);
-                const burnAmount = Math.floor(totalLamports * 0.03);  // 3% BURNED
-                
-                let devAmount = Math.floor(totalLamports * 0.05);   // 5% to Dev
+                const burnAmount = Math.floor(totalLamports * 0.03);  
+                let devAmount = Math.floor(totalLamports * 0.05);   
                 let refAmount = 0;
                 let refATA = null;
 
@@ -108,147 +154,190 @@ export function useSlots(reelRefs, winningLineRef, sessionWallet) {
                 if (referrerStr && referrerStr !== publicKey.toBase58()) {
                     try {
                         const refPubkey = new PublicKey(referrerStr);
-                        refATA = await getAssociatedTokenAddress(LUDO_MINT, refPubkey);
-                        refAmount = Math.floor(totalLamports * 0.005); // 0.5% to Referrer
-                        devAmount -= refAmount; // Dev keeps 4.5%
-                    } catch (e) {
-                        console.warn('Invalid referrer', e);
-                    }
+                        refATA = await ensureAta(LUDO_MINT, refPubkey, publicKey);
+                        refAmount = Math.floor(totalLamports * 0.005);
+                        devAmount -= refAmount; 
+                    } catch (e) { console.warn('Invalid referrer', e); }
                 }
 
-                const treasuryAmount = totalLamports - devAmount - burnAmount - refAmount; // 92% to Treasury
+                const treasuryAmount = totalLamports - devAmount - burnAmount - refAmount;
 
-                const transaction = new Transaction().add(
-                    // 92% → Treasury (holds winnings pool)
-                    createTransferCheckedInstruction(
-                        fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6
-                    ),
-                    // 4.5% or 5% → Dev wallet (revenue)
-                    createTransferCheckedInstruction(
-                        fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6
-                    ),
-                    // 3% → BURNED FOREVER (reduces $LUDO total supply on-chain)
-                    createBurnCheckedInstruction(
-                        fromATA, LUDO_MINT, publicKey, burnAmount, 6
-                    )
+                transaction.add(
+                    createTransferCheckedInstruction(fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6),
+                    createTransferCheckedInstruction(fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6),
+                    createBurnCheckedInstruction(fromATA, LUDO_MINT, publicKey, burnAmount, 6)
                 );
 
                 if (refAmount > 0 && refATA) {
-                    transaction.add(
-                        createTransferCheckedInstruction(
-                            fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6
-                        )
-                    );
+                    transaction.add(createTransferCheckedInstruction(fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6));
                 }
 
                 const signature = await sendTransaction(transaction, connection);
                 setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
                 
                 const latestBlockhash = await connection.getLatestBlockhash();
-                await connection.confirmTransaction({
-                    signature,
-                    ...latestBlockhash
-                }, 'confirmed');
+                await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed');
             }
-            
             updateBalance(-betAmount);
-            setSessionSpins(prev => prev + 1);
+
         } catch (error) {
-            console.error('❌ Transaction failed:', error);
             setStatusScreenHtml({ text: 'TRANSACTION REJECTED OR FAILED', type: 'lose' });
             setIsSpinning(false);
             setAutoSpinActive(false);
-            return false;
+            return { success: false, winAmount: 0 };
         }
 
-        // ---- ADAPTIVE RTP (BAIT & HARVEST) ----
-        let difficultyMultiplier = 1.0;
-        if (betAmount > 1000) difficultyMultiplier = 0.95;
-        if (betAmount > 10000) difficultyMultiplier = 0.90;
-        if (sessionSpins > 50) difficultyMultiplier *= 0.98;
-        
-        const spinPhrases = [
-            "Let's gooo!", "Fingers crossed!", "Big win incoming...", "Spinning...", "Come on, jackpot!"
-        ];
-        
+        const spinPhrases = ["Let's gooo!", "Fingers crossed!", "Big win incoming...", "Spinning...", "Come on, jackpot!"];
         setMascotState(prev => ({ ...prev, isSpinning: true }));
         showMascotMessage(spinPhrases[Math.floor(Math.random() * spinPhrases.length)], 2000);
 
-        const outcome = await generateSpinResult(serverSeed, clientSeed, nonce);
-        let winningSymbol = outcome.winningSymbol;
-        const hash = outcome.hash;
+        // Fetch spin result hash and old seed from server
+        const fairnessRes = await fetch('/api/fairness', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientSeed, nonce })
+        });
+        const fairnessData = await fairnessRes.json();
+        
+        // Use the hash from server to generate grid
+        const outcome = await generateSpinResult(fairnessData.serverSeed, clientSeed, nonce);
+        const newGrid = outcome.grid;
 
-        if (winningSymbol && Math.random() > difficultyMultiplier) {
-            console.log(`🎰 Adaptive RTP: Winning spin adjusted to loss (Diff: ${difficultyMultiplier})`);
-            winningSymbol = null; 
-        }
-
+        // Update for next spin
+        setServerSeed(fairnessData.serverSeed);
+        setCurrentServerHash(fairnessData.nextServerHash);
         setNonce(prev => prev + 1);
 
-        let finalSymbols = [];
-        
-        if (winningSymbol) {
-            finalSymbols = [winningSymbol, winningSymbol, winningSymbol];
-        } else {
-            const loseSym1 = SYMBOLS[parseInt(hash.slice(8, 10), 16) % SYMBOLS.length];
-            const loseSym2 = SYMBOLS[parseInt(hash.slice(10, 12), 16) % SYMBOLS.length];
-            let loseSym3 = SYMBOLS[parseInt(hash.slice(12, 14), 16) % SYMBOLS.length];
-            
-            if (loseSym1 === loseSym2 && loseSym2 === loseSym3) {
-                loseSym3 = SYMBOLS[(SYMBOLS.indexOf(loseSym3) + 1) % SYMBOLS.length];
+        const p1 = animateReel(reelRefs[0], newGrid[0], 1000);
+        const p2 = animateReel(reelRefs[1], newGrid[1], 1200);
+        const p3 = animateReel(reelRefs[2], newGrid[2], 1400);
+        const p4 = animateReel(reelRefs[3], newGrid[3], 1600);
+        const p5 = animateReel(reelRefs[4], newGrid[4], 1800);
+
+        await Promise.all([p1, p2, p3, p4, p5]);
+        setGrid(newGrid);
+
+        // Win Calculation Logic
+        let totalWinAmount = 0;
+        let newWinningPositions = [];
+        let newWinningLines = [];
+
+        // 1. Scatters pay anywhere based on total bet
+        let scatterCount = 0;
+        let scatterPositions = [];
+        newGrid.forEach((col, colIdx) => {
+            col.forEach((sym, rowIdx) => {
+                if (sym === '⭐') {
+                    scatterCount++;
+                    scatterPositions.push({ col: colIdx, row: rowIdx });
+                }
+            });
+        });
+
+        if (scatterCount >= 3) {
+            const scatterMulti = PAYTABLE['⭐'][scatterCount] || 0;
+            if (scatterMulti > 0) {
+                totalWinAmount += betAmount * scatterMulti;
+                newWinningPositions.push(...scatterPositions);
+                newWinningLines.push(scatterPositions.sort((a,b) => a.col - b.col));
             }
-            finalSymbols = [loseSym1, loseSym2, loseSym3];
         }
 
-        const p1 = animateReel(reelRefs[0].current, finalSymbols[0], 1000);
-        const p2 = animateReel(reelRefs[1].current, finalSymbols[1], 1500);
-        const p3 = animateReel(reelRefs[2].current, finalSymbols[2], 2000);
+        // 2. Paylines Left-to-Right
+        const betPerLine = betAmount / PAYLINES.length;
 
-        await Promise.all([p1, p2, p3]);
+        PAYLINES.forEach((line) => {
+            let matchCount = 1;
+            let firstSymbol = newGrid[0][line[0]];
+            if (firstSymbol === '⭐') return; 
+            
+            let actualSymbol = firstSymbol;
+            let linePositions = [{ col: 0, row: line[0] }];
 
+            for (let i = 1; i < 5; i++) {
+                const sym = newGrid[i][line[i]];
+                if (sym === '⭐') break; 
+
+                if (actualSymbol === '👑' && sym !== '👑') actualSymbol = sym; // Wild absorbs
+
+                if (sym === actualSymbol || sym === '👑') {
+                    matchCount++;
+                    linePositions.push({ col: i, row: line[i] });
+                } else {
+                    break;
+                }
+            }
+
+            if (matchCount >= 3) {
+                const win = betPerLine * (PAYTABLE[actualSymbol]?.[matchCount] || 0);
+                if (win > 0) {
+                    totalWinAmount += win;
+                    newWinningPositions.push(...linePositions);
+                    newWinningLines.push([...linePositions]);
+                }
+            }
+        });
+
+        const uniqueWinningPositions = newWinningPositions.filter((v, i, a) => a.findIndex(t => (t.col === v.col && t.row === v.row)) === i);
+        setWinningPositions(uniqueWinningPositions);
+        setWinningLines(newWinningLines);
+        
+        totalWinAmount = Math.floor(totalWinAmount);
         setMascotState(prev => ({ ...prev, isSpinning: false }));
         
-        if (finalSymbols[0] === finalSymbols[1] && finalSymbols[1] === finalSymbols[2]) {
-            const multiplier = MULTIPLIERS[finalSymbols[0]];
-            const winAmount = betAmount * multiplier;
-            updateBalance(winAmount);
-            if (winningLineRef.current) winningLineRef.current.classList.add('active');
+        if (totalWinAmount > 0) {
+            updateBalance(totalWinAmount);
             playSound('win');
-            setStatusScreenHtml({ text: `PAYOUT SECURED: +${winAmount.toLocaleString()} $LUDO (${multiplier}X)`, type: 'win' });
-            
-            const winPhrases = ["JACKPOT! We did it!", "Unbelievable!", "That's what I'm talking about!", "Easy money!", "Winner winner!"];
+            setStatusScreenHtml({ text: `REQUESTING PAYOUT: +${totalWinAmount.toLocaleString()} $LUDO`, type: 'win' });
             
             setMascotState(prev => ({ ...prev, mode: 'win' }));
             setTimeout(() => setMascotState(prev => ({ ...prev, mode: 'idle' })), 500);
-            showMascotMessage(winPhrases[Math.floor(Math.random() * winPhrases.length)], 4000);
+            showMascotMessage(["JACKPOT! We did it!", "Unbelievable!", "Easy money!"][Math.floor(Math.random() * 3)], 4000);
             
-            // Record Win to DB
+            // 1. Record win in feed (stats only)
             fetch('/api/spin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ wallet: publicKey.toBase58(), amount: winAmount, isWin: true, type: 'spin' })
-            }).catch(e => console.error("Failed to record spin", e));
+                body: JSON.stringify({ wallet: publicKey.toBase58(), amount: totalWinAmount, isWin: true, type: 'spin' })
+            }).catch(e => console.error(e));
+
+            // 2. Request actual on-chain token transfer from Treasury
+            try {
+                const payoutRes = await fetch('/api/payout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet: publicKey.toBase58(), amount: totalWinAmount })
+                });
+                
+                const payoutData = await payoutRes.json();
+                if (payoutData.success) {
+                    setStatusScreenHtml({ text: `PAYOUT SECURED ON-CHAIN`, type: 'win' });
+                } else {
+                    console.error("Payout error", payoutData);
+                    setStatusScreenHtml({ text: `PAYOUT PENDING (CONTACT SUPPORT)`, type: 'normal' });
+                }
+            } catch (err) {
+                console.error("Payout request failed:", err);
+            }
+
         } else {
             updateBurned(betAmount);
             playSound('lose');
             setStatusScreenHtml({ text: `🔥 ${betAmount.toLocaleString()} $LUDO BURNED FOREVER`, type: 'burn' });
             
-            const losePhrases = ["Ouch! Try again!", "Next time for sure.", "Almost had it...", "Don't give up!", "Bad luck..."];
-            
             setMascotState(prev => ({ ...prev, mode: 'lose' }));
             setTimeout(() => setMascotState(prev => ({ ...prev, mode: 'idle' })), 500);
-            showMascotMessage(losePhrases[Math.floor(Math.random() * losePhrases.length)], 3000);
+            showMascotMessage(["Ouch! Try again!", "Next time for sure.", "Bad luck..."][Math.floor(Math.random() * 3)], 3000);
             
-            // Record Burn to DB
             fetch('/api/spin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ wallet: publicKey.toBase58(), amount: betAmount, isWin: false, type: 'burn' })
-            }).catch(e => console.error("Failed to record burn", e));
+            }).catch(e => console.error(e));
         }
 
         setIsSpinning(false);
-        return true;
+        return { success: true, winAmount: totalWinAmount };
     };
 
     return {
@@ -257,6 +346,7 @@ export function useSlots(reelRefs, winningLineRef, sessionWallet) {
         isSpinning,
         autoSpinActive, setAutoSpinActive,
         performSpin,
-        provablyFairState: { clientSeed, nonce, currentServerHash }
+        provablyFairState: { clientSeed, nonce, currentServerHash },
+        grid, winningPositions, winningLines
     };
 }

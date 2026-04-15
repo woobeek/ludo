@@ -18,20 +18,18 @@ const { Connection, PublicKey } = require('@solana/web3.js');
 
 // ===================== CONFIG =====================
 const CONFIG = {
-    BOT_TOKEN: '8624467032:AAEOAHwLDtjZyXLRsM1T29TiyS9P3EsTPRw',
-    CHAT_ID: '439161837',
+    // Используем данные из твоего .env.local
+    BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '8624467032:AAEOAHwLDtjZyXLRsM1T29TiyS9P3EsTPRw',
+    CHAT_ID: process.env.TELEGRAM_CHAT_ID || '439161837',
 
-    // Report interval (in minutes). Default: every 30 min
     REPORT_INTERVAL_MINUTES: 30,
-
-    // Solana RPC (use a reliable endpoint or your own)
-    RPC_URL: 'https://api.devnet.solana.com',
+    RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com',
 
     // $LUDO on-chain addresses
-    LUDO_MINT: 'Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG',
-    DEV_WALLET: 'HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV',
-    TREASURY_WALLET: 'EZM3xXLxtCGD4uBXRjd1cre5h79isyJKxptKorKvPuyU',
-    INITIAL_SUPPLY: 1_000_000,  // Match your tokenomics
+    LUDO_MINT: process.env.NEXT_PUBLIC_LUDO_MINT || 'Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG',
+    DEV_WALLET: process.env.NEXT_PUBLIC_DEV_WALLET || 'HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV',
+    TREASURY_WALLET: process.env.NEXT_PUBLIC_TREASURY_WALLET || 'G5J8U7ZewA9HT4HigYdToxXYv8GeAKgR9sNxGHdtT4qs',
+    INITIAL_SUPPLY: 1_000_000_000, // Стандарт для pump.fun часто 1 млрд
 };
 // ==================================================
 

@@ -7,6 +7,7 @@ import Leaderboard from '../components/Leaderboard';
 import SocialLinks from '../components/SocialLinks';
 import WalletModal from '../components/WalletModal';
 import CasinoBoard from '../components/CasinoBoard';
+import RecentActivity from '../components/RecentActivity';
 
 import { AppWalletProvider } from '../context/AppWalletProvider';
 
@@ -17,11 +18,19 @@ export default function Home() {
                 <AmbientBackground />
                 <Header />
                 <main>
-                    <Leaderboard />
-                    <SocialLinks />
+                    <div className="leaderboard-sidebar">
+                        <Leaderboard />
+                    </div>
+                    
                     <CasinoBoard />
+                    
+                    <div className="recent-activity-sidebar">
+                        <RecentActivity />
+                    </div>
                 </main>
-                <Footer />
+                <div className="relative z-10 flex flex-col items-center pb-6">
+                    <Footer />
+                </div>
                 <WalletModal />
             </GameProvider>
         </AppWalletProvider>

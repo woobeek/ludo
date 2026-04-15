@@ -11,34 +11,39 @@ export function generateSeed() {
         .map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function hashToFloat(hash) {
-    // Take the first 8 hex characters (32 bits)
-    const partial = hash.slice(0, 8);
-    const intValue = parseInt(partial, 16);
-    return intValue / 4294967296; // Divide by 2^32
-}
+export const SYMBOLS = ['👑', '⭐', '7️⃣', '💎', '🚀', '🪙', '🍒'];
 
 /**
- * Calculates the exact winning symbol based on the 96% RTP Distribution
- * 7: 20x (1%)
- * Diamond: 10x (2%)
- * Rocket: 5x (4%)
- * Coin: 3x (6%)
- * Cherry: 2x (9%)
+ * Distributes outcomes across 65536 possible values (16 bits).
+ * 👑 Wild: 4% | ⭐ Scatter: 5% | 7️⃣: 10% | 💎: 15% | 🚀: 15% | 🪙: 23% | 🍒: 28%
  */
-export function getOutcomeFromFloat(floatVal) {
-    if (floatVal < 0.01) return '7️⃣';
-    if (floatVal < 0.03) return '💎';
-    if (floatVal < 0.07) return '🚀';
-    if (floatVal < 0.13) return '🪙';
-    if (floatVal < 0.22) return '🍒';
-    return null; // Lose
+export function getSymbolFromInt(val) {
+    if (val < 2621) return '👑';   // 4%
+    if (val < 5898) return '⭐';   // 9% cumulative
+    if (val < 12451) return '7️⃣';  // 19% cumulative
+    if (val < 22282) return '💎';  // 34% cumulative
+    if (val < 32112) return '🚀';  // 49% cumulative
+    if (val < 47185) return '🪙';  // 72% cumulative
+    return '🍒';               // 100%
 }
 
 export async function generateSpinResult(serverSeed, clientSeed, nonce) {
     const message = `${serverSeed}:${clientSeed}:${nonce}`;
     const hash = await generateHash(message);
-    const resultFloat = hashToFloat(hash);
-    const winningSymbol = getOutcomeFromFloat(resultFloat);
-    return { hash, resultFloat, winningSymbol };
+    
+    // Generate a 5x3 Grid independently from the hash
+    const grid = []; 
+    for (let col = 0; col < 5; col++) {
+        const column = [];
+        for (let row = 0; row < 3; row++) {
+            const index = col * 3 + row;
+            // Extract 4 hex characters (16 bits) per position
+            const hex = hash.slice(index * 4, index * 4 + 4);
+            const intVal = parseInt(hex, 16);
+            column.push(getSymbolFromInt(intVal));
+        }
+        grid.push(column);
+    }
+    
+    return { hash, grid };
 }

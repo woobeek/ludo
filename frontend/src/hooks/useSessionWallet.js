@@ -5,9 +5,10 @@ import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAsso
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 
-const LUDO_MINT = new PublicKey('Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG');
-const TREASURY_WALLET = new PublicKey('EZM3xXLxtCGD4uBXRjd1cre5h79isyJKxptKorKvPuyU');
-const DEV_WALLET = new PublicKey('HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV');
+// All addresses from env — easy to update after pump.fun launch
+const LUDO_MINT = new PublicKey(process.env.NEXT_PUBLIC_LUDO_MINT);
+const TREASURY_WALLET = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_WALLET);
+const DEV_WALLET = new PublicKey(process.env.NEXT_PUBLIC_DEV_WALLET);
 
 // Minimum SOL required in session wallet for transaction fees (~0.002 SOL covers ~20 txns)
 const SESSION_FEE_RESERVE = 0.003 * LAMPORTS_PER_SOL;

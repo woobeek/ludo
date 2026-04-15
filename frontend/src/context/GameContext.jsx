@@ -3,7 +3,8 @@ import { createContext, useContext, useRef, useState, useCallback, useEffect } f
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 
-const LUDO_MINT = 'Aazg6ZeGs4YEjumFFNis2DGDZs2dF7tNaiJXNDha7dGG';
+const LUDO_MINT = process.env.NEXT_PUBLIC_LUDO_MINT;
+const DEV_WALLET_ADDRESS = process.env.NEXT_PUBLIC_DEV_WALLET;
 
 const GameContext = createContext(null);
 
@@ -11,9 +12,13 @@ export function GameProvider({ children }) {
     // ---- AUDIO LAYER ----
     const audioCtxRef = useRef(null);
 
-    const initAudio = useCallback(() => {
-        if (!audioCtxRef.current && typeof window !== 'undefined') {
+    const initAudio = useCallback(async () => {
+        if (typeof window === 'undefined') return;
+        if (!audioCtxRef.current) {
             audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtxRef.current.state === 'suspended') {
+            await audioCtxRef.current.resume();
         }
     }, []);
 
@@ -103,7 +108,7 @@ export function GameProvider({ children }) {
             const currentSupply = supply.value.uiAmount;
             const burnedCount = Math.max(0, 1000000 - currentSupply);
             // 3. Fetch Developer Profit (Balance of Dev Wallet)
-            const devPublicKey = new PublicKey('HPHFaAUdftepbXikCyEX45vjSSpE1HHGehp3FTFAvYnV');
+            const devPublicKey = new PublicKey(DEV_WALLET_ADDRESS);
             const devTokenAccounts = await connection.getParsedTokenAccountsByOwner(devPublicKey, {
                 mint: new PublicKey(LUDO_MINT)
             });

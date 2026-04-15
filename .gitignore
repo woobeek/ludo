@@ -15,3 +15,15 @@ yarn-error.log*
 *.pem
 .env*
 .vercel/
+
+# Security — NEVER commit these
+*-authority.json
+*-mint-authority.json
+ludo-mint-authority.json
+frontend/ludo-mint-authority.json
+frontend/ludo-token-info.json
+revenue-bot.js
+
+# Data files
+database.json
+*.bak

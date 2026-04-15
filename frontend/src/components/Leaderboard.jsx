@@ -17,30 +17,34 @@ export default function Leaderboard() {
             }
         };
         fetchLeaderboard();
-        const interval = setInterval(fetchLeaderboard, 10000);
+        const interval = setInterval(fetchLeaderboard, 30000);
         return () => clearInterval(interval);
     }, []);
 
-    const rankEmoji = ['🥇', '🥈', '🥉'];
+    const rankClasses = ['rank-gold', 'rank-silver', 'rank-bronze'];
+    const rankEmojis = ['🥇', '🥈', '🥉'];
 
     return (
-        <div className="leaderboard glass-panel">
-            <h3 className="leaderboard-title">🏆 TOP WINS TODAY</h3>
-            <ul className="leaderboard-list" id="leaderboard-list">
+        <div className="leaderboard-sidebar-inner">
+            <h3 className="sidebar-title">🏆 GLOBAL LEADERS</h3>
+            <ul className="lb-list">
                 {topWins.length === 0 ? (
                     [...Array(5)].map((_, i) => (
-                        <li className="lb-item loading-skeleton" key={i} style={{ opacity: 0.3 }}>
+                        <li className="lb-item skeleton" key={i}>
                             <span className="lb-rank">#?</span>
-                            <span className="lb-wallet">Loading...</span>
-                            <span className="lb-amount">---</span>
+                            <span className="activity-wallet" style={{background: '#333', color: 'transparent', borderRadius: '4px'}}>-----</span>
                         </li>
                     ))
                 ) : (
                     topWins.map((win, idx) => (
                         <li className="lb-item" key={idx}>
-                            <span className="lb-rank">{rankEmoji[idx] ?? `#${idx + 1}`}</span>
-                            <span className="lb-wallet">{win.wallet}</span>
-                            <span className="lb-amount">+{win.amount.toLocaleString()}</span>
+                            <span className={`lb-rank ${rankClasses[idx] || ''}`}>
+                                {rankEmojis[idx] || `#${idx + 1}`}
+                            </span>
+                            <div className="activity-details">
+                                <span className="activity-wallet">{win.wallet.slice(0,6)}...</span>
+                                <span className="activity-amount">{win.amount.toLocaleString()} LUDO</span>
+                            </div>
                         </li>
                     ))
                 )}

@@ -1,23 +1,30 @@
 'use client';
 import { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { 
+    PhantomWalletAdapter, 
+    SolflareWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
 
 export function AppWalletProvider({ children }) {
-    // Determine the network to connect to
-    const network = 'devnet';
+    // Network from env (defaults to mainnet-beta for production)
+    const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'mainnet-beta';
     
-    // Set up the endpoint
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+    // Use custom RPC if provided, otherwise default Solana endpoint
+    const endpoint = useMemo(() => 
+        process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl(network), 
+    [network]);
     
     // Initialize standard wallets
     const wallets = useMemo(
         () => [
-            new PhantomWalletAdapter()
+            new PhantomWalletAdapter(),
+            new SolflareWalletAdapter(),
         ],
         []
     );
+
 
     return (
         <ConnectionProvider endpoint={endpoint}>
