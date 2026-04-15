@@ -556,9 +556,9 @@ main {
 }
 
 .mascot-container {
-    position: fixed;
-    bottom: 120px;
-    right: -80px;
+    position: absolute;
+    bottom: 0;
+    right: -120px;
     z-index: 50;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
