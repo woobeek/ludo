@@ -15,6 +15,7 @@
 
 const TelegramBot = require('node-telegram-bot-api');
 const { Connection, PublicKey } = require('@solana/web3.js');
+require('dotenv').config({ path: './frontend/.env.local' });
 
 // ===================== CONFIG =====================
 const CONFIG = {
