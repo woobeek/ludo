@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Keypair, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram, PublicKey } from '@solana/web3.js';
-import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getAccount } from '@solana/spl-token';
+import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getAccount, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 
 const LUDO_MINT = new PublicKey(process.env.NEXT_PUBLIC_LUDO_MINT);
@@ -127,9 +127,9 @@ export function useSessionWallet() {
         const sessionKeypair = sessionKeypairRef.current;
         const sessionPubkey = sessionKeypair.publicKey;
 
-        const sessionATA = await getAssociatedTokenAddress(LUDO_MINT, sessionPubkey);
-        const treasuryATA = await getAssociatedTokenAddress(LUDO_MINT, TREASURY_WALLET);
-        const devATA = await getAssociatedTokenAddress(LUDO_MINT, DEV_WALLET);
+        const sessionATA = await getAssociatedTokenAddress(LUDO_MINT, sessionPubkey, false, TOKEN_2022_PROGRAM_ID);
+        const treasuryATA = await getAssociatedTokenAddress(LUDO_MINT, TREASURY_WALLET, false, TOKEN_2022_PROGRAM_ID);
+        const devATA = await getAssociatedTokenAddress(LUDO_MINT, DEV_WALLET, false, TOKEN_2022_PROGRAM_ID);
 
         const totalLamports = Math.floor(betAmount * 1_000_000);
         const burnAmount = Math.floor(totalLamports * 0.03);  
@@ -141,7 +141,7 @@ export function useSessionWallet() {
         if (referrerStr && referrerStr !== publicKey?.toBase58()) {
             try {
                 const refPubkey = new PublicKey(referrerStr);
-                refATA = await getAssociatedTokenAddress(LUDO_MINT, refPubkey);
+                refATA = await getAssociatedTokenAddress(LUDO_MINT, refPubkey, false, TOKEN_2022_PROGRAM_ID);
                 refAmount = Math.floor(totalLamports * 0.005);
                 devAmount -= refAmount;
             } catch (e) {
@@ -154,14 +154,14 @@ export function useSessionWallet() {
         const transaction = new Transaction().add(
             ComputeBudgetProgram.setComputeUnitLimit({ units: 300000 }),
             ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 }),
-            createTransferCheckedInstruction(sessionATA, LUDO_MINT, treasuryATA, sessionPubkey, treasuryAmount, 6),
-            createTransferCheckedInstruction(sessionATA, LUDO_MINT, devATA, sessionPubkey, devAmount, 6),
-            createBurnCheckedInstruction(sessionATA, LUDO_MINT, sessionPubkey, burnAmount, 6)
+            createTransferCheckedInstruction(sessionATA, LUDO_MINT, treasuryATA, sessionPubkey, treasuryAmount, 6, TOKEN_2022_PROGRAM_ID),
+            createTransferCheckedInstruction(sessionATA, LUDO_MINT, devATA, sessionPubkey, devAmount, 6, TOKEN_2022_PROGRAM_ID),
+            createBurnCheckedInstruction(sessionATA, LUDO_MINT, sessionPubkey, burnAmount, 6, TOKEN_2022_PROGRAM_ID)
         );
 
         if (refAmount > 0 && refATA) {
             transaction.add(
-                createTransferCheckedInstruction(sessionATA, LUDO_MINT, refATA, sessionPubkey, refAmount, 6)
+                createTransferCheckedInstruction(sessionATA, LUDO_MINT, refATA, sessionPubkey, refAmount, 6, TOKEN_2022_PROGRAM_ID)
             );
         }
 

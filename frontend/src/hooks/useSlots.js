@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { generateSeed, SYMBOLS } from '../utils/provablyFair';
 import { PublicKey, Transaction, ComputeBudgetProgram } from '@solana/web3.js';
-import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
+import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 
 const LUDO_MINT = new PublicKey(process.env.NEXT_PUBLIC_LUDO_MINT);
@@ -109,15 +109,15 @@ export function useSlots(reelRefs, sessionWallet) {
                     ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 })
                 );
                 const ensureAta = async (mint, owner, payer) => {
-                    const ata = await getAssociatedTokenAddress(mint, owner);
+                    const ata = await getAssociatedTokenAddress(mint, owner, false, TOKEN_2022_PROGRAM_ID);
                     const accountInfo = await connection.getAccountInfo(ata);
                     if (!accountInfo) {
-                         transaction.add(createAssociatedTokenAccountInstruction(payer, ata, owner, mint));
+                         transaction.add(createAssociatedTokenAccountInstruction(payer, ata, owner, mint, TOKEN_2022_PROGRAM_ID));
                     }
                     return ata;
                 };
 
-                const fromATA = await getAssociatedTokenAddress(LUDO_MINT, publicKey);
+                const fromATA = await getAssociatedTokenAddress(LUDO_MINT, publicKey, false, TOKEN_2022_PROGRAM_ID);
                 const treasuryATA = await ensureAta(LUDO_MINT, TREASURY_WALLET, publicKey);
                 const devATA = await ensureAta(LUDO_MINT, DEV_WALLET, publicKey);
                 
@@ -140,13 +140,13 @@ export function useSlots(reelRefs, sessionWallet) {
                 const treasuryAmount = totalLamports - devAmount - burnAmount - refAmount;
 
                 transaction.add(
-                    createTransferCheckedInstruction(fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6),
-                    createTransferCheckedInstruction(fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6),
-                    createBurnCheckedInstruction(fromATA, LUDO_MINT, publicKey, burnAmount, 6)
+                    createTransferCheckedInstruction(fromATA, LUDO_MINT, treasuryATA, publicKey, treasuryAmount, 6, TOKEN_2022_PROGRAM_ID),
+                    createTransferCheckedInstruction(fromATA, LUDO_MINT, devATA, publicKey, devAmount, 6, TOKEN_2022_PROGRAM_ID),
+                    createBurnCheckedInstruction(fromATA, LUDO_MINT, publicKey, burnAmount, 6, TOKEN_2022_PROGRAM_ID)
                 );
 
                 if (refAmount > 0 && refATA) {
-                    transaction.add(createTransferCheckedInstruction(fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6));
+                    transaction.add(createTransferCheckedInstruction(fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6, TOKEN_2022_PROGRAM_ID));
                 }
 
                 const latestBlockhash = await connection.getLatestBlockhash('processed');

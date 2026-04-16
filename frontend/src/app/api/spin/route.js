@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
-import { getAssociatedTokenAddress, createTransferCheckedInstruction } from '@solana/spl-token';
+import { getAssociatedTokenAddress, createTransferCheckedInstruction, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { recordSpin, getCurrentServerSeed, rotateServerSeed } from '../../../lib/db';
 import { generateSpinResultSync, calculateWin } from '../../../utils/gameEngine';
 import crypto from 'crypto';
@@ -63,8 +63,8 @@ export async function POST(request) {
                 // Let's assume the frontend passes the correct `wallet` parameter (if session, passes session wallet).
                 const playerPubkey = new PublicKey(wallet);
 
-                const treasuryATA = await getAssociatedTokenAddress(mintPubkey, treasuryPubkey);
-                const playerATA = await getAssociatedTokenAddress(mintPubkey, playerPubkey);
+                const treasuryATA = await getAssociatedTokenAddress(mintPubkey, treasuryPubkey, false, TOKEN_2022_PROGRAM_ID);
+                const playerATA = await getAssociatedTokenAddress(mintPubkey, playerPubkey, false, TOKEN_2022_PROGRAM_ID);
 
                 const payoutLamports = Math.floor(winAmount * 1_000_000);
 
@@ -75,7 +75,7 @@ export async function POST(request) {
                      // Proceed without crashing, but no payout sent. Will need manual refund.
                 } else {
                     const transaction = new Transaction().add(
-                        createTransferCheckedInstruction(treasuryATA, mintPubkey, playerATA, treasuryPubkey, payoutLamports, 6)
+                        createTransferCheckedInstruction(treasuryATA, mintPubkey, playerATA, treasuryPubkey, payoutLamports, 6, TOKEN_2022_PROGRAM_ID)
                     );
 
                     const { blockhash } = await connection.getLatestBlockhash('processed');
