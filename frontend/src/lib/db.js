@@ -37,9 +37,9 @@ export async function recordSpin(wallet, amount, isWin, type, signature = null) 
     if (!supabase) return null;
 
     if (signature) {
-        // Simple replay attack prevention
-        const { data } = await supabase.from('spins').select('id').eq('tx_signature', signature).single();
-        if (data) throw new Error('Transaction already used for a spin');
+        // Simple replay attack prevention — maybeSingle returns null if not found (no throw)
+        const { data: existing } = await supabase.from('spins').select('id').eq('tx_signature', signature).maybeSingle();
+        if (existing) throw new Error('Transaction already used for a spin');
     }
 
     try {
