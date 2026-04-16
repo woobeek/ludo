@@ -106,7 +106,7 @@ export function useSlots(reelRefs, sessionWallet) {
 
                 const transaction = new Transaction().add(
                     ComputeBudgetProgram.setComputeUnitLimit({ units: 300000 }),
-                    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 150000 })
+                    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 })
                 );
                 const ensureAta = async (mint, owner, payer) => {
                     const ata = await getAssociatedTokenAddress(mint, owner);
@@ -149,12 +149,16 @@ export function useSlots(reelRefs, sessionWallet) {
                     transaction.add(createTransferCheckedInstruction(fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6));
                 }
 
+                const latestBlockhash = await connection.getLatestBlockhash('processed');
+                
                 txSignature = await sendTransaction(transaction, connection);
                 setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
                 
-                // Use 'processed' to avoid slow timeouts on UI
-                const latestBlockhash = await connection.getLatestBlockhash('processed');
-                await connection.confirmTransaction({ signature: txSignature, ...latestBlockhash }, 'processed');
+                await connection.confirmTransaction({ 
+                    signature: txSignature, 
+                    blockhash: latestBlockhash.blockhash,
+                    lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
+                }, 'processed');
             }
 
             if (!useSession) updateBalance(-betAmount);

@@ -153,7 +153,7 @@ export function useSessionWallet() {
 
         const transaction = new Transaction().add(
             ComputeBudgetProgram.setComputeUnitLimit({ units: 300000 }),
-            ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 150000 }),
+            ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1000000 }),
             createTransferCheckedInstruction(sessionATA, LUDO_MINT, treasuryATA, sessionPubkey, treasuryAmount, 6),
             createTransferCheckedInstruction(sessionATA, LUDO_MINT, devATA, sessionPubkey, devAmount, 6),
             createBurnCheckedInstruction(sessionATA, LUDO_MINT, sessionPubkey, burnAmount, 6)
@@ -165,8 +165,8 @@ export function useSessionWallet() {
             );
         }
 
-        const { blockhash } = await connection.getLatestBlockhash('processed');
-        transaction.recentBlockhash = blockhash;
+        const latestBlockhash = await connection.getLatestBlockhash('processed');
+        transaction.recentBlockhash = latestBlockhash.blockhash;
         transaction.feePayer = sessionPubkey; 
 
         transaction.sign(sessionKeypair);
@@ -177,7 +177,11 @@ export function useSessionWallet() {
         });
 
         // Use processed commitment to beat serverless 10s limits 
-        await connection.confirmTransaction(signature, 'processed');
+        await connection.confirmTransaction({
+            signature,
+            blockhash: latestBlockhash.blockhash,
+            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
+        }, 'processed');
         setSessionBalance(prev => prev - betAmount);
 
         return signature;
