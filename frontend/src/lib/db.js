@@ -1,56 +1,89 @@
-// In-memory store for Vercel serverless (no filesystem writes)
-// Data persists within a single serverless instance lifecycle.
-// For production scale, replace with Vercel KV or Supabase.
+import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
-const store = {
-    topWins: [
-        { wallet: '8xK9...2mP', amount: 250000 },
-        { wallet: 'D7fE...3aB', amount: 150000 },
-        { wallet: '4vNx...9qL', amount: 85000 },
-        { wallet: '1aBc...7zY', amount: 40000 },
-        { wallet: '9pRt...5wK', amount: 20000 }
-    ],
-    feed: []
-};
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
-export function getLeaderboard() {
-    return store.topWins;
-}
+export const supabase = (supabaseUrl && supabaseKey) 
+    ? createClient(supabaseUrl, supabaseKey) 
+    : null;
 
-export function getFeed() {
-    return store.feed;
-}
+// Helper to get or init the global server seed in the DB
+export async function getCurrentServerSeed() {
+    if (!supabase) return crypto.randomBytes(32).toString('hex');
 
-export function recordSpin(wallet, amount, isWin, type = 'spin') {
-    const walletShort = wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}` : 'Unknown';
+    const { data } = await supabase
+        .from('server_state')
+        .select('seed')
+        .eq('id', 1)
+        .single();
     
-    const feedItem = {
-        id: Date.now().toString() + Math.random().toString(),
-        wallet: walletShort,
-        amount,
-        isWin,
-        type,
-        timestamp: Date.now()
-    };
-    
-    store.feed.unshift(feedItem);
-    if (store.feed.length > 50) store.feed.pop();
-    
-    if (isWin) {
-        const existingIndex = store.topWins.findIndex(w => w.wallet === walletShort);
-        if (existingIndex !== -1) {
-            if (amount > store.topWins[existingIndex].amount) {
-                store.topWins[existingIndex].amount = amount;
-            }
-        } else {
-            const lowestTopWin = store.topWins[store.topWins.length - 1];
-            if (store.topWins.length < 5 || amount > (lowestTopWin ? lowestTopWin.amount : 0)) {
-                store.topWins.push({ wallet: walletShort, amount });
-            }
-        }
-        store.topWins.sort((a, b) => b.amount - a.amount);
-        store.topWins = store.topWins.slice(0, 5);
+    if (!data) {
+        const newSeed = crypto.randomBytes(32).toString('hex');
+        await supabase.from('server_state').insert({ id: 1, seed: newSeed });
+        return newSeed;
     }
-    
-    return feedItem;
+    return data.seed;
+}
+
+export async function rotateServerSeed() {
+    const newSeed = crypto.randomBytes(32).toString('hex');
+    if (!supabase) return newSeed;
+    await supabase.from('server_state').update({ seed: newSeed }).eq('id', 1);
+    return newSeed;
+}
+
+export async function recordSpin(wallet, amount, isWin, type, signature = null) {
+    if (!supabase) return null;
+
+    if (signature) {
+        // Simple replay attack prevention
+        const { data } = await supabase.from('spins').select('id').eq('tx_signature', signature).single();
+        if (data) throw new Error('Transaction already used for a spin');
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('spins')
+            .insert([{ wallet, amount, is_win: isWin, type, tx_signature: signature }])
+            .select('*')
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (e) {
+        console.error('Failed to record spin to DB', e);
+        throw e;
+    }
+}
+
+export async function getLeaderboard() {
+    if (!supabase) return [];
+    try {
+        const { data, error } = await supabase
+            .from('spins')
+            .select('*')
+            .eq('is_win', true)
+            .order('amount', { ascending: false })
+            .limit(10);
+        if (error) return [];
+        return data;
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function getLiveFeed() {
+    if (!supabase) return [];
+    try {
+        const { data, error } = await supabase
+            .from('spins')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10);
+        if (error) return [];
+        return data;
+    } catch (e) {
+        return [];
+    }
 }

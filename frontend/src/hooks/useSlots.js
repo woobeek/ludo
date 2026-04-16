@@ -1,38 +1,14 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
-import { generateSeed, generateSpinResult, generateHash, SYMBOLS } from '../utils/provablyFair';
+import { generateSeed, SYMBOLS } from '../utils/provablyFair';
 import { PublicKey, Transaction } from '@solana/web3.js';
 import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 
-// All addresses from env — easy to update after pump.fun launch
 const LUDO_MINT = new PublicKey(process.env.NEXT_PUBLIC_LUDO_MINT);
 const TREASURY_WALLET = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_WALLET);
 const DEV_WALLET = new PublicKey(process.env.NEXT_PUBLIC_DEV_WALLET);
-
-const PAYLINES = [
-    [1, 1, 1, 1, 1], // Middle
-    [0, 0, 0, 0, 0], // Top
-    [2, 2, 2, 2, 2], // Bottom
-    [0, 1, 2, 1, 0], // V
-    [2, 1, 0, 1, 2], // Inverted V
-    [1, 0, 0, 0, 1], // Zigzag 1
-    [1, 2, 2, 2, 1], // Zigzag 2
-    [0, 0, 1, 2, 2], // Step Down
-    [2, 2, 1, 0, 0], // Step Up
-    [1, 2, 1, 0, 1]  // W-shape
-];
-
-const PAYTABLE = {
-    '7️⃣': { 3: 20, 4: 70, 5: 300 },
-    '💎': { 3: 15, 4: 50, 5: 150 },
-    '🚀': { 3: 10, 4: 30, 5: 100 },
-    '🪙': { 3: 6, 4: 15, 5: 50 },
-    '🍒': { 3: 2.5, 4: 8, 5: 25 },
-    '👑': { 3: 50, 4: 150, 5: 600 }, // Wild matching itself
-    '⭐': { 3: 5, 4: 20, 5: 75 }    // Scatter pays multiplier on TOTAL bet
-};
 
 export function useSlots(reelRefs, sessionWallet) {
     const { isConnected, balance, updateBalance, updateBurned, playSound, setStatusScreenHtml, setMascotState } = useGame();
@@ -60,7 +36,6 @@ export function useSlots(reelRefs, sessionWallet) {
     const [currentServerHash, setCurrentServerHash] = useState('');
 
     useEffect(() => {
-        // Fetch the initial server hash from our secure server
         fetch('/api/fairness')
             .then(res => res.json())
             .then(data => {
@@ -107,6 +82,7 @@ export function useSlots(reelRefs, sessionWallet) {
 
         const useSession = sessionWallet?.sessionActive;
         const activeBalance = useSession ? sessionWallet.sessionBalance : balance;
+        const activeWalletAddress = useSession ? sessionWallet.sessionAddress : publicKey.toBase58();
 
         if (betAmount > activeBalance) {
             setStatusScreenHtml({ text: 'INSUFFICIENT $LUDO BALANCE', type: 'lose' });
@@ -119,24 +95,23 @@ export function useSlots(reelRefs, sessionWallet) {
         setWinningPositions([]);
         setWinningLines([]);
         
+        let txSignature = null;
+
         try {
             if (useSession) {
                 setStatusScreenHtml({ text: 'SPINNING (SESSION)...', type: 'normal' });
-                await sessionWallet.sendSessionSpinTransaction(betAmount);
+                txSignature = await sessionWallet.sendSessionSpinTransaction(betAmount);
             } else {
                 setStatusScreenHtml({ text: 'WAITING FOR APPROVAL...', type: 'normal' });
 
                 const transaction = new Transaction();
-
-                // Helper to ensure ATA exists
                 const ensureAta = async (mint, owner, payer) => {
                     const ata = await getAssociatedTokenAddress(mint, owner);
                     try {
-                        const account = await connection.getAccountInfo(ata);
-                        if (!account) {
-                            transaction.add(createAssociatedTokenAccountInstruction(payer, ata, owner, mint));
-                        }
-                    } catch (e) {}
+                         await connection.getAccountInfo(ata);
+                    } catch (e) {
+                         transaction.add(createAssociatedTokenAccountInstruction(payer, ata, owner, mint));
+                    }
                     return ata;
                 };
 
@@ -172,13 +147,15 @@ export function useSlots(reelRefs, sessionWallet) {
                     transaction.add(createTransferCheckedInstruction(fromATA, LUDO_MINT, refATA, publicKey, refAmount, 6));
                 }
 
-                const signature = await sendTransaction(transaction, connection);
+                txSignature = await sendTransaction(transaction, connection);
                 setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
                 
-                const latestBlockhash = await connection.getLatestBlockhash();
-                await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed');
+                // Use 'processed' to avoid slow timeouts on UI
+                const latestBlockhash = await connection.getLatestBlockhash('processed');
+                await connection.confirmTransaction({ signature: txSignature, ...latestBlockhash }, 'processed');
             }
-            updateBalance(-betAmount);
+
+            if (!useSession) updateBalance(-betAmount);
 
         } catch (error) {
             setStatusScreenHtml({ text: 'TRANSACTION REJECTED OR FAILED', type: 'lose' });
@@ -191,21 +168,40 @@ export function useSlots(reelRefs, sessionWallet) {
         setMascotState(prev => ({ ...prev, isSpinning: true }));
         showMascotMessage(spinPhrases[Math.floor(Math.random() * spinPhrases.length)], 2000);
 
-        // Fetch spin result hash and old seed from server
-        const fairnessRes = await fetch('/api/fairness', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clientSeed, nonce })
-        });
-        const fairnessData = await fairnessRes.json();
-        
-        // Use the hash from server to generate grid
-        const outcome = await generateSpinResult(fairnessData.serverSeed, clientSeed, nonce);
-        const newGrid = outcome.grid;
+        // DELIVER AUTHORITY TO BACKEND: Send the signature and seed data for secure resolution
+        let spinData = null;
+        try {
+            const spinRes = await fetch('/api/spin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    signature: txSignature,
+                    betAmount,
+                    clientSeed, 
+                    nonce,
+                    wallet: activeWalletAddress,
+                    isSession: useSession
+                })
+            });
+            spinData = await spinRes.json();
+            if(!spinData.success) {
+                setStatusScreenHtml({ text: 'SERVER REJECTED SPIN (REPLAY OR INVALID)', type: 'lose' });
+                setIsSpinning(false);
+                setAutoSpinActive(false);
+                return { success: false, winAmount: 0 };
+            }
+        } catch (e) {
+            console.error(e);
+            setStatusScreenHtml({ text: 'SERVER CONNECTION LOST', type: 'lose' });
+            setIsSpinning(false);
+            setAutoSpinActive(false);
+            return { success: false, winAmount: 0 };
+        }
 
-        // Update for next spin
-        setServerSeed(fairnessData.serverSeed);
-        setCurrentServerHash(fairnessData.nextServerHash);
+        const { grid: newGrid, winAmount: totalWinAmount, serverSeed: returnedServerSeed, nextServerHash } = spinData;
+
+        setServerSeed(returnedServerSeed);
+        setCurrentServerHash(nextServerHash);
         setNonce(prev => prev + 1);
 
         const p1 = animateReel(reelRefs[0], newGrid[0], 1000);
@@ -217,108 +213,20 @@ export function useSlots(reelRefs, sessionWallet) {
         await Promise.all([p1, p2, p3, p4, p5]);
         setGrid(newGrid);
 
-        // Win Calculation Logic
-        let totalWinAmount = 0;
-        let newWinningPositions = [];
-        let newWinningLines = [];
-
-        // 1. Scatters pay anywhere based on total bet
-        let scatterCount = 0;
-        let scatterPositions = [];
-        newGrid.forEach((col, colIdx) => {
-            col.forEach((sym, rowIdx) => {
-                if (sym === '⭐') {
-                    scatterCount++;
-                    scatterPositions.push({ col: colIdx, row: rowIdx });
-                }
-            });
-        });
-
-        if (scatterCount >= 3) {
-            const scatterMulti = PAYTABLE['⭐'][scatterCount] || 0;
-            if (scatterMulti > 0) {
-                totalWinAmount += betAmount * scatterMulti;
-                newWinningPositions.push(...scatterPositions);
-                newWinningLines.push(scatterPositions.sort((a,b) => a.col - b.col));
-            }
-        }
-
-        // 2. Paylines Left-to-Right
-        const betPerLine = betAmount / PAYLINES.length;
-
-        PAYLINES.forEach((line) => {
-            let matchCount = 1;
-            let firstSymbol = newGrid[0][line[0]];
-            if (firstSymbol === '⭐') return; 
-            
-            let actualSymbol = firstSymbol;
-            let linePositions = [{ col: 0, row: line[0] }];
-
-            for (let i = 1; i < 5; i++) {
-                const sym = newGrid[i][line[i]];
-                if (sym === '⭐') break; 
-
-                if (actualSymbol === '👑' && sym !== '👑') actualSymbol = sym; // Wild absorbs
-
-                if (sym === actualSymbol || sym === '👑') {
-                    matchCount++;
-                    linePositions.push({ col: i, row: line[i] });
-                } else {
-                    break;
-                }
-            }
-
-            if (matchCount >= 3) {
-                const win = betPerLine * (PAYTABLE[actualSymbol]?.[matchCount] || 0);
-                if (win > 0) {
-                    totalWinAmount += win;
-                    newWinningPositions.push(...linePositions);
-                    newWinningLines.push([...linePositions]);
-                }
-            }
-        });
-
-        const uniqueWinningPositions = newWinningPositions.filter((v, i, a) => a.findIndex(t => (t.col === v.col && t.row === v.row)) === i);
-        setWinningPositions(uniqueWinningPositions);
-        setWinningLines(newWinningLines);
+        // Since the server doesn't send winningPositions (to save bandwidth), we highlight visually if winAmount > 0.
+        // A robust MVP would have the server return winningPositions too, but for now we just use a big visual popup.
+        // We will just leave winningPositions empty, or flash the whole board if winAmount > 0.
         
-        totalWinAmount = Math.floor(totalWinAmount);
         setMascotState(prev => ({ ...prev, isSpinning: false }));
         
         if (totalWinAmount > 0) {
-            updateBalance(totalWinAmount);
+            if (!useSession) updateBalance(totalWinAmount);
             playSound('win');
-            setStatusScreenHtml({ text: `REQUESTING PAYOUT: +${totalWinAmount.toLocaleString()} $LUDO`, type: 'win' });
+            setStatusScreenHtml({ text: `PAYOUT SECURED ON-CHAIN: +${totalWinAmount.toLocaleString()} $LUDO`, type: 'win' });
             
             setMascotState(prev => ({ ...prev, mode: 'win' }));
             setTimeout(() => setMascotState(prev => ({ ...prev, mode: 'idle' })), 500);
             showMascotMessage(["JACKPOT! We did it!", "Unbelievable!", "Easy money!"][Math.floor(Math.random() * 3)], 4000);
-            
-            // 1. Record win in feed (stats only)
-            fetch('/api/spin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ wallet: publicKey.toBase58(), amount: totalWinAmount, isWin: true, type: 'spin' })
-            }).catch(e => console.error(e));
-
-            // 2. Request actual on-chain token transfer from Treasury
-            try {
-                const payoutRes = await fetch('/api/payout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ wallet: publicKey.toBase58(), amount: totalWinAmount })
-                });
-                
-                const payoutData = await payoutRes.json();
-                if (payoutData.success) {
-                    setStatusScreenHtml({ text: `PAYOUT SECURED ON-CHAIN`, type: 'win' });
-                } else {
-                    console.error("Payout error", payoutData);
-                    setStatusScreenHtml({ text: `PAYOUT PENDING (CONTACT SUPPORT)`, type: 'normal' });
-                }
-            } catch (err) {
-                console.error("Payout request failed:", err);
-            }
 
         } else {
             updateBurned(betAmount);
@@ -328,12 +236,6 @@ export function useSlots(reelRefs, sessionWallet) {
             setMascotState(prev => ({ ...prev, mode: 'lose' }));
             setTimeout(() => setMascotState(prev => ({ ...prev, mode: 'idle' })), 500);
             showMascotMessage(["Ouch! Try again!", "Next time for sure.", "Bad luck..."][Math.floor(Math.random() * 3)], 3000);
-            
-            fetch('/api/spin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ wallet: publicKey.toBase58(), amount: betAmount, isWin: false, type: 'burn' })
-            }).catch(e => console.error(e));
         }
 
         setIsSpinning(false);
