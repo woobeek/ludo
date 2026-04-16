@@ -1,9 +1,8 @@
 'use client';
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Keypair, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Keypair, Transaction, SystemProgram, LAMPORTS_PER_SOL, ComputeBudgetProgram, PublicKey } from '@solana/web3.js';
 import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getAccount } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
 
 const LUDO_MINT = new PublicKey(process.env.NEXT_PUBLIC_LUDO_MINT);
 const TREASURY_WALLET = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_WALLET);
@@ -153,6 +152,8 @@ export function useSessionWallet() {
         const treasuryAmount = totalLamports - devAmount - burnAmount - refAmount;
 
         const transaction = new Transaction().add(
+            ComputeBudgetProgram.setComputeUnitLimit({ units: 300000 }),
+            ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 150000 }),
             createTransferCheckedInstruction(sessionATA, LUDO_MINT, treasuryATA, sessionPubkey, treasuryAmount, 6),
             createTransferCheckedInstruction(sessionATA, LUDO_MINT, devATA, sessionPubkey, devAmount, 6),
             createBurnCheckedInstruction(sessionATA, LUDO_MINT, sessionPubkey, burnAmount, 6)

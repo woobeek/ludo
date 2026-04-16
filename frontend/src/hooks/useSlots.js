@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { generateSeed, SYMBOLS } from '../utils/provablyFair';
-import { PublicKey, Transaction } from '@solana/web3.js';
+import { PublicKey, Transaction, ComputeBudgetProgram } from '@solana/web3.js';
 import { createTransferCheckedInstruction, createBurnCheckedInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from '@solana/spl-token';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 
@@ -104,7 +104,10 @@ export function useSlots(reelRefs, sessionWallet) {
             } else {
                 setStatusScreenHtml({ text: 'WAITING FOR APPROVAL...', type: 'normal' });
 
-                const transaction = new Transaction();
+                const transaction = new Transaction().add(
+                    ComputeBudgetProgram.setComputeUnitLimit({ units: 300000 }),
+                    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 150000 })
+                );
                 const ensureAta = async (mint, owner, payer) => {
                     const ata = await getAssociatedTokenAddress(mint, owner);
                     const accountInfo = await connection.getAccountInfo(ata);
