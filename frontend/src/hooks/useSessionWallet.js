@@ -174,6 +174,7 @@ export function useSessionWallet() {
         const signature = await connection.sendRawTransaction(rawTransaction, {
             skipPreflight: false,
             preflightCommitment: 'processed',
+            maxRetries: 10,
         });
 
         // Use processed commitment to beat serverless 10s limits 

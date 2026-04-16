@@ -151,7 +151,7 @@ export function useSlots(reelRefs, sessionWallet) {
 
                 const latestBlockhash = await connection.getLatestBlockhash('processed');
                 
-                txSignature = await sendTransaction(transaction, connection);
+                txSignature = await sendTransaction(transaction, connection, { maxRetries: 10 });
                 setStatusScreenHtml({ text: 'CONFIRMING ON-CHAIN...', type: 'normal' });
                 
                 await connection.confirmTransaction({ 
