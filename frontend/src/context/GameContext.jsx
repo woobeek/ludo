@@ -78,6 +78,7 @@ export function GameProvider({ children }) {
     const [totalBurned, setTotalBurned] = useState(0);
     const [devProfit, setDevProfit] = useState(0);
     const [showWalletModal, setShowWalletModal] = useState(false);
+    const [showReferralModal, setShowReferralModal] = useState(false);
     const [mockTx, setMockTx] = useState({ text: 'Wallet D7fE... just burned 500 $LUDO! 🔥', color: 'var(--text-muted)' });
     const [statusScreenHtml, setStatusScreenHtml] = useState({ 
         text: 'WAITING FOR CONNECTION...', 
@@ -213,6 +214,8 @@ export function GameProvider({ children }) {
         updateBurned,
         showWalletModal,
         setShowWalletModal,
+        showReferralModal,
+        setShowReferralModal,
         toggleConnect,
         mockTx,
         statusScreenHtml,

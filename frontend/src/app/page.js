@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import Leaderboard from '../components/Leaderboard';
 import SocialLinks from '../components/SocialLinks';
 import WalletModal from '../components/WalletModal';
+import ReferralModal from '../components/ReferralModal';
 import CasinoBoard from '../components/CasinoBoard';
 import RecentActivity from '../components/RecentActivity';
 
@@ -32,6 +33,7 @@ export default function Home() {
                     <Footer />
                 </div>
                 <WalletModal />
+                <ReferralModal />
             </GameProvider>
         </AppWalletProvider>
     );

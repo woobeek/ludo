@@ -2,7 +2,7 @@
 import { useGame } from '../context/GameContext';
 
 export default function Header() {
-    const { totalBurned, balance, isConnected, walletAddress, toggleConnect } = useGame();
+    const { totalBurned, balance, isConnected, walletAddress, toggleConnect, setShowReferralModal } = useGame();
 
     return (
         <header className="slim-nav">
@@ -14,6 +14,10 @@ export default function Header() {
                 <span className="stat-value">{totalBurned.toLocaleString()}</span>
             </div>
             <div className="slim-wallet">
+                <button className="cyber-btn slim-btn ref-btn" onClick={() => setShowReferralModal(true)}>
+                    <span className="btn-text">🤝 REFER</span>
+                    <span className="btn-glitch"></span>
+                </button>
                 <div id="balance-display" className={`glass-panel slim-balance ${!isConnected ? 'hidden' : ''}`}>
                     <span id="sol-balance">{balance.toLocaleString()}</span> <span className="currency">$LUDO</span>
                 </div>
