@@ -107,9 +107,8 @@ export function useSlots(reelRefs, sessionWallet) {
                 const transaction = new Transaction();
                 const ensureAta = async (mint, owner, payer) => {
                     const ata = await getAssociatedTokenAddress(mint, owner);
-                    try {
-                         await connection.getAccountInfo(ata);
-                    } catch (e) {
+                    const accountInfo = await connection.getAccountInfo(ata);
+                    if (!accountInfo) {
                          transaction.add(createAssociatedTokenAccountInstruction(payer, ata, owner, mint));
                     }
                     return ata;
