@@ -157,7 +157,9 @@ export function useSlots(reelRefs, sessionWallet) {
             if (!useSession) updateBalance(-betAmount);
 
         } catch (error) {
-            setStatusScreenHtml({ text: 'TRANSACTION REJECTED OR FAILED', type: 'lose' });
+            console.error('SPIN ERROR DETAIL:', error);
+            const errorMsg = error?.message || 'TRANSACTION REJECTED';
+            setStatusScreenHtml({ text: `ERROR: ${errorMsg.slice(0, 40)}...`, type: 'lose' });
             setIsSpinning(false);
             setAutoSpinActive(false);
             return { success: false, winAmount: 0 };
