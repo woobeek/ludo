@@ -1,8 +1,18 @@
 import { Connection, PublicKey, Keypair, Transaction, ComputeBudgetProgram } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createTransferCheckedInstruction, createAssociatedTokenAccountInstruction, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 
-const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=68b46c12-4c46-456c-849e-352c0ab32857', 'confirmed');
-const secretKey = new Uint8Array([30,189,115,131,242,254,253,160,242,215,5,98,117,135,15,205,183,29,171,237,78,46,211,61,209,97,173,246,186,91,84,134,223,248,254,162,183,17,15,231,243,92,200,129,29,157,153,107,80,232,46,196,19,247,229,191,17,77,222,136,52,148,193,190]);
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
+const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL, 'confirmed');
+const secretKeyString = process.env.TREASURY_SECRET_KEY;
+
+if (!secretKeyString) {
+    console.error("ERROR: TREASURY_SECRET_KEY not found in .env.local");
+    process.exit(1);
+}
+
+const secretKey = new Uint8Array(JSON.parse(secretKeyString));
 const treasuryKeypair = Keypair.fromSecretKey(secretKey);
 
 const LUDO_MINT = new PublicKey('9fApW86ot5BfxTmKUz28BjD2vX3UyTVQgNDPVRAXpump');

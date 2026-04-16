@@ -10,20 +10,22 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Misc
-.DS_Store
-*.pem
-.env*
-.vercel/
-
 # Security — NEVER commit these
+.env*
 *-authority.json
 *-mint-authority.json
 ludo-mint-authority.json
 frontend/ludo-mint-authority.json
 frontend/ludo-token-info.json
 revenue-bot.js
+test-*.mjs
+inspect-*.mjs
+check-*.mjs
+deep-scan.mjs
+*.key
+*.secret
 
 # Data files
 database.json
 *.bak
+*.log
