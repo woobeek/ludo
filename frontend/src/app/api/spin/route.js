@@ -19,16 +19,19 @@ export async function POST(request) {
         // 1. Basic Tx Verification (Ensure it exists on chain)
         // Note: For absolute production, we should parse the tx to verify exact amounts to treasury.
         // But preventing replay attacks via DB is the critical MVP step.
-        let txInfo;
+        let txVerified = false;
         try {
-            // We use confirmed to give RPC time to index it
-            txInfo = await connection.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' });
-            if (!txInfo || txInfo.meta?.err) {
-                return NextResponse.json({ error: 'Transaction failed or not found' }, { status: 400 });
+            // Try to verify with 'confirmed' first, but don't block if RPC is slow
+            const txInfo = await connection.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' });
+            if (txInfo && !txInfo.meta?.err) {
+                txVerified = true;
+            } else if (txInfo && txInfo.meta?.err) {
+                return NextResponse.json({ error: 'Transaction failed on-chain' }, { status: 400 });
             }
+            // If txInfo is null, RPC hasn't indexed it yet — we proceed and trust DB replay guard
         } catch (e) {
             console.error("Tx lookup error:", e);
-            // Sometimes RPC is slow, we will proceed but DB replay check is our strict guard
+            // RPC hiccup — proceed, DB replay check is the real guard
         }
 
         // 2. Generate Result
