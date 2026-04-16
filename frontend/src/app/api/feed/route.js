@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getFeed } from '../../../lib/db';
+import { getLiveFeed } from '../../../lib/db';
 
 export async function GET() {
-    return NextResponse.json(getFeed());
+    const feed = await getLiveFeed();
+    return NextResponse.json(feed);
 }

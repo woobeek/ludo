@@ -2,5 +2,6 @@ import { NextResponse } from 'next/server';
 import { getLeaderboard } from '../../../lib/db';
 
 export async function GET() {
-    return NextResponse.json(getLeaderboard());
+    const leaderboard = await getLeaderboard();
+    return NextResponse.json(leaderboard);
 }
